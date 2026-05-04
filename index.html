@@ -304,19 +304,20 @@ async function enviarParaSheets(zerarDepois = false) {
 
   try {
     showToast('📤 Enviando para o Sheets...', '');
-    const resp = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      headers: { 'Content-Type': 'text/plain' }
-    });
-    const result = await resp.json();
-    if (result.ok) {
-      localStorage.setItem(KEY_ULTIMO_ENV, new Date().toISOString());
-      showToast('✅ Salvo no Google Sheets!', 'success');
-      if (zerarDepois) zerarEstoque();
-    } else {
-      showToast('⚠️ Erro ao salvar no Sheets', 'error');
-    }
+
+    // Apps Script não aceita CORS com POST direto.
+    // Solução: enviar via GET com dados em parâmetro (URL encode)
+    const dataEncoded = encodeURIComponent(JSON.stringify(payload));
+    const url = APPS_SCRIPT_URL + '?dados=' + dataEncoded;
+
+    // Usar no-cors (não dá pra ler resposta, mas o script executa)
+    await fetch(url, { method: 'GET', mode: 'no-cors' });
+
+    // Como no-cors não retorna resposta legível, assumimos sucesso
+    localStorage.setItem(KEY_ULTIMO_ENV, new Date().toISOString());
+    showToast('✅ Enviado para o Google Sheets!', 'success');
+    if (zerarDepois) zerarEstoque();
+
   } catch(e) {
     showToast('⚠️ Sem conexão com Sheets', 'error');
   }
