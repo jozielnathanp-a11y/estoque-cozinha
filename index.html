@@ -147,8 +147,9 @@
   <div class="card">
     <h3>💾 Exportar Dados</h3>
     <p style="font-size:0.83rem;color:#555;margin-bottom:10px;">Baixe para abrir no Excel ou Google Sheets.</p>
-    <button class="btn btn-green" onclick="exportCSV('estoque')">📦 Exportar Estoque (CSV)</button>
-    <button class="btn btn-blue" onclick="exportCSV('historico')" style="margin-top:8px;">📋 Exportar Histórico (CSV)</button>
+    <button class="btn btn-green" onclick="exportCSV('estoque')">📦 Estoque Atual (consolidado)</button>
+    <button class="btn btn-blue" onclick="exportCSV('entradas')" style="margin-top:8px;">📥 Entradas Consolidadas</button>
+    <button class="btn btn-orange" onclick="exportCSV('historico')" style="margin-top:8px;">📋 Histórico Completo</button>
   </div>
   <div class="card">
     <h3>🗑️ Limpar Dados</h3>
@@ -571,19 +572,48 @@ function renderEstoque() {
 // ── EXPORTAR ──
 function exportCSV(tipo) {
   let csv = '', filename = '';
+
   if (tipo === 'estoque') {
-    csv = 'Codigo,Nome,Categoria,Estoque,Unidade,Cadastrado Em\n';
-    Object.values(getProdutos()).forEach(p => {
-      csv += `"${p.codigo}","${p.nome}","${p.categoria}",${p.estoque},"${p.unidade}","${fmtD(p.criadoEm)}"\n`;
-    });
+    // Estoque atual consolidado (saldo final de cada produto)
+    csv = 'Produto,Categoria,Quantidade,Unidade\n';
+    Object.values(getProdutos())
+      .sort((a,b) => a.nome.localeCompare(b.nome))
+      .forEach(p => {
+        const qtd = p.estoque % 1 === 0 ? p.estoque : parseFloat(p.estoque).toFixed(3);
+        csv += `"${p.nome}","${p.categoria}",${qtd},"${p.unidade}"\n`;
+      });
     filename = 'estoque_cozinha_' + dataHoje() + '.csv';
+
+  } else if (tipo === 'entradas') {
+    // Histórico de ENTRADAS consolidado por produto (soma do dia)
+    // Agrupar por produto
+    const agrupado = {};
+    getHistorico()
+      .filter(h => h.tipo === 'entrada')
+      .forEach(h => {
+        const key = h.codigo + '_' + h.nome;
+        if (!agrupado[key]) agrupado[key] = { nome: h.nome, unidade: h.unidade, total: 0 };
+        agrupado[key].total += parseFloat(h.qtd);
+      });
+    csv = 'Produto,Total Entrado,Unidade\n';
+    Object.values(agrupado)
+      .sort((a,b) => a.nome.localeCompare(b.nome))
+      .forEach(p => {
+        const qtd = p.total % 1 === 0 ? p.total : parseFloat(p.total).toFixed(3);
+        csv += `"${p.nome}",${qtd},"${p.unidade}"\n`;
+      });
+    filename = 'entradas_consolidadas_' + dataHoje() + '.csv';
+
   } else {
-    csv = 'Data,Produto,Codigo,Tipo,Quantidade,Unidade,Destino,Observacao\n';
+    // Histórico completo detalhado
+    csv = 'Data,Produto,Tipo,Quantidade,Unidade,Destino,Observacao\n';
     getHistorico().forEach(h => {
-      csv += `"${fmtD(h.data)}","${h.nome}","${h.codigo}","${h.tipo}",${h.qtd},"${h.unidade}","${h.destino||''}","${h.obs||''}"\n`;
+      const qtd = parseFloat(h.qtd) % 1 === 0 ? h.qtd : parseFloat(h.qtd).toFixed(3);
+      csv += `"${fmtD(h.data)}","${h.nome}","${h.tipo}",${qtd},"${h.unidade}","${h.destino||''}","${h.obs||''}"\n`;
     });
-    filename = 'historico_estoque_' + dataHoje() + '.csv';
+    filename = 'historico_completo_' + dataHoje() + '.csv';
   }
+
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a'); a.href = url; a.download = filename; a.click();
