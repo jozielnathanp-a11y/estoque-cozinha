@@ -361,11 +361,27 @@ function abrirCadastro(code) {
   document.getElementById('modal-overlay').classList.add('open');
 }
 
+// Unidades que lançam automaticamente sem perguntar quantidade
+const UNIDADES_AUTO = ['pct','un','cx','L'];
+
 function abrirMovimentacao(code) {
   currentCode = code;
   const p = getProdutos()[code];
-  document.getElementById('modal-title').textContent    = '📦 Movimentação';
-  document.getElementById('modal-subtitle').textContent = 'Código: ' + code;
+
+  // Se não é kg/g → lança +1 automaticamente
+  if (UNIDADES_AUTO.includes(p.unidade)) {
+    p.estoque += 1;
+    const produtos = getProdutos();
+    produtos[code] = p;
+    saveProdutos(produtos);
+    addHistorico(code, p.nome, 'entrada', 1, p.unidade, 'Lançamento rápido', '');
+    showToast('✅ +1 ' + p.unidade + ' — ' + p.nome, 'success');
+    return; // não abre modal
+  }
+
+  // kg ou g → abre modal para digitar quantidade
+  document.getElementById('modal-title').textContent    = '⚖️ Quantidade';
+  document.getElementById('modal-subtitle').textContent = p.nome;
   document.getElementById('mov-nome').textContent          = p.nome;
   document.getElementById('mov-estoque-atual').textContent = 'Estoque atual: ' + fmtQ(p.estoque, p.unidade);
   document.getElementById('mov-unidade-label').textContent = 'Unidade: ' + p.unidade;
@@ -375,6 +391,7 @@ function abrirMovimentacao(code) {
   document.getElementById('modal-cadastro').style.display     = 'none';
   document.getElementById('modal-movimentacao').style.display = 'block';
   document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('mov-qtd').focus(), 300);
 }
 
 function fecharModal() {
