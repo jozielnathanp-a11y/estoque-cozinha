@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Estoque Cozinha – Prensadão</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #222; min-height: 100vh; }
+    header { background: #b71c1c; color: white; padding: 16px 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+    header h1 { font-size: 1.2rem; font-weight: 700; }
+    header span { font-size: 0.85rem; opacity: 0.85; }
+    .tabs { display: flex; background: #fff; border-bottom: 2px solid #e0e0e0; }
+    .tab { flex: 1; padding: 13px 4px; text-align: center; font-size: 0.8rem; font-weight: 600; color: #888; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; }
+    .tab.active { color: #b71c1c; border-bottom-color: #b71c1c; }
+    .screen { display: none; padding: 14px; }
+    .screen.active { display: block; }
+    .btn { display: block; width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 10px; transition: opacity 0.2s; }
+    .btn:active { opacity: 0.75; }
+    .btn-red    { background: #b71c1c; color: #fff; }
+    .btn-green  { background: #2e7d32; color: #fff; }
+    .btn-gray   { background: #ccc; color: #333; }
+    .btn-blue   { background: #1565c0; color: #fff; }
+    .btn-orange { background: #e65100; color: #fff; }
+    .card { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .card h3 { font-size: 0.95rem; margin-bottom: 8px; color: #b71c1c; }
+    label { display: block; font-size: 0.83rem; color: #555; margin-bottom: 3px; margin-top: 9px; }
+    input, select { width: 100%; padding: 10px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 0.93rem; background: #fafafa; }
+    input:focus, select:focus { outline: none; border-color: #b71c1c; background: #fff; }
+    .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 0.73rem; font-weight: 700; }
+    .badge-entrada { background: #e8f5e9; color: #2e7d32; }
+    .badge-saida   { background: #fff3e0; color: #e65100; }
+    .produto-card { background: #fff; border-radius: 10px; padding: 12px 14px; margin-bottom: 9px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+    .produto-info h4 { font-size: 0.93rem; font-weight: 700; }
+    .produto-info small { font-size: 0.76rem; color: #888; }
+    .produto-qty { font-size: 1.15rem; font-weight: 800; color: #b71c1c; text-align: right; min-width: 65px; }
+    .produto-qty small { font-size: 0.68rem; color: #888; display: block; font-weight: 400; }
+    .search-bar { display: flex; gap: 8px; margin-bottom: 10px; }
+    .search-bar input { flex: 1; }
+    .hist-item { background: #fff; border-radius: 10px; padding: 11px 13px; margin-bottom: 7px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .hist-item .top { display: flex; justify-content: space-between; align-items: center; }
+    .hist-item h4 { font-size: 0.88rem; font-weight: 700; }
+    .hist-item small { font-size: 0.73rem; color: #888; margin-top: 2px; display: block; }
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #323232; color: #fff; padding: 11px 20px; border-radius: 24px; font-size: 0.88rem; z-index: 9999; transition: transform 0.3s ease; white-space: nowrap; }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.success { background: #2e7d32; }
+    #toast.error   { background: #b71c1c; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: flex-end; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; width: 100%; max-width: 480px; border-radius: 20px 20px 0 0; padding: 22px 18px 30px; max-height: 90vh; overflow-y: auto; }
+    .modal h2 { font-size: 1.05rem; margin-bottom: 3px; color: #b71c1c; }
+    .modal p  { font-size: 0.83rem; color: #777; margin-bottom: 10px; }
+    .empty { text-align: center; color: #aaa; padding: 36px 16px; font-size: 0.88rem; }
+    .empty span { font-size: 2.2rem; display: block; margin-bottom: 7px; }
+    .section-title { font-size: 0.75rem; font-weight: 700; color: #888; margin: 10px 0 5px; text-transform: uppercase; letter-spacing: 1px; }
+    .toggle-row { display: flex; gap: 6px; margin-top: 8px; }
+    .toggle-btn { flex: 1; padding: 10px 4px; border: 2px solid #ddd; border-radius: 8px; background: #fff; font-size: 0.85rem; font-weight: 700; cursor: pointer; text-align: center; color: #888; }
+    .toggle-btn.sel-entrada { border-color: #2e7d32; background: #e8f5e9; color: #2e7d32; }
+    .toggle-btn.sel-saida   { border-color: #e65100; background: #fff3e0; color: #e65100; }
+
+    /* Scanner nativo */
+    #video-container { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #000; }
+    #scanner-video { width: 100%; display: block; max-height: 280px; object-fit: cover; }
+    #scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+    #scan-line { width: 70%; height: 2px; background: #ff3333; box-shadow: 0 0 8px #ff3333; animation: scanAnim 2s linear infinite; }
+    @keyframes scanAnim { 0%,100% { transform: translateY(-60px); } 50% { transform: translateY(60px); } }
+    #scan-frame { position: absolute; width: 70%; aspect-ratio: 2/1; border: 2px solid rgba(255,255,255,0.7); border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🍳 Estoque Cozinha</h1>
+    <span>Prensadão – Centro</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('scanner',this)">📷 Escanear</div>
+  <div class="tab" onclick="showTab('estoque',this)">📦 Estoque</div>
+  <div class="tab" onclick="showTab('historico',this)">📋 Histórico</div>
+  <div class="tab" onclick="showTab('exportar',this)">💾 Exportar</div>
+</div>
+
+<!-- SCANNER -->
+<div id="tab-scanner" class="screen active">
+  <div class="card" style="margin-top:0;">
+    <h3>📷 Leitura de Código de Barras</h3>
+    <div id="video-container" style="display:none;">
+      <video id="scanner-video" autoplay muted playsinline></video>
+      <div id="scan-overlay">
+        <div id="scan-frame"></div>
+        <div id="scan-line"></div>
+      </div>
+    </div>
+    <button class="btn btn-red" id="btn-start" onclick="startScanner()" style="margin-top:0;">▶ Iniciar Câmera</button>
+    <button class="btn btn-gray" id="btn-stop" onclick="stopScanner()" style="display:none;">⏹ Parar Câmera</button>
+    <p id="scan-status" style="font-size:0.76rem;color:#888;margin-top:7px;text-align:center;">Toque em "Iniciar Câmera" para escanear</p>
+  </div>
+  <div class="card">
+    <h3>⌨️ Digitar Código Manualmente</h3>
+    <input type="number" id="manual-code" placeholder="Ex: 7891234567890" inputmode="numeric" />
+    <button class="btn btn-blue" onclick="processBarcode(document.getElementById('manual-code').value)" style="margin-top:8px;">🔍 Buscar Produto</button>
+  </div>
+</div>
+
+<!-- ESTOQUE -->
+<div id="tab-estoque" class="screen">
+  <div class="search-bar">
+    <input type="text" id="search-input" placeholder="🔍 Buscar produto..." oninput="renderEstoque()" />
+  </div>
+  <div id="estoque-lista"></div>
+</div>
+
+<!-- HISTÓRICO -->
+<div id="tab-historico" class="screen">
+  <div id="historico-lista"></div>
+</div>
+
+<!-- EXPORTAR -->
+<div id="tab-exportar" class="screen">
+  <div class="card">
+    <h3>💾 Exportar Dados</h3>
+    <p style="font-size:0.83rem;color:#555;margin-bottom:10px;">Baixe para abrir no Excel ou Google Sheets.</p>
+    <button class="btn btn-green" onclick="exportCSV('estoque')">📦 Exportar Estoque (CSV)</button>
+    <button class="btn btn-blue" onclick="exportCSV('historico')" style="margin-top:8px;">📋 Exportar Histórico (CSV)</button>
+  </div>
+  <div class="card">
+    <h3>🗑️ Limpar Dados</h3>
+    <p style="font-size:0.82rem;color:#c62828;margin-bottom:8px;">Apaga todos os produtos e movimentações.</p>
+    <button class="btn btn-gray" onclick="limparDados()">Limpar tudo</button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2 id="modal-title">Produto</h2>
+    <p id="modal-subtitle"></p>
+
+    <div id="modal-cadastro" style="display:none;">
+      <label>Nome do Produto *</label>
+      <input type="text" id="prod-nome" placeholder="Ex: Frango Congelado" />
+      <label>Unidade de Medida *</label>
+      <select id="prod-unidade">
+        <option value="kg">Quilograma (kg)</option>
+        <option value="un">Unidade (un)</option>
+        <option value="L">Litro (L)</option>
+        <option value="cx">Caixa (cx)</option>
+        <option value="pct">Pacote (pct)</option>
+        <option value="g">Grama (g)</option>
+      </select>
+      <label>Categoria</label>
+      <select id="prod-categoria">
+        <option value="Carnes">🥩 Carnes</option>
+        <option value="Frios">🧀 Frios</option>
+        <option value="Hortifruti">🥦 Hortifruti</option>
+        <option value="Bebidas">🥤 Bebidas</option>
+        <option value="Limpeza">🧹 Limpeza</option>
+        <option value="Embalagens">📦 Embalagens</option>
+        <option value="Temperos">🧂 Temperos</option>
+        <option value="Outros">📦 Outros</option>
+      </select>
+      <label>Quantidade Inicial</label>
+      <input type="number" id="prod-qtd-inicial" placeholder="0" step="0.01" min="0" value="0" />
+      <button class="btn btn-green" onclick="cadastrarProduto()" style="margin-top:14px;">✅ Cadastrar</button>
+      <button class="btn btn-gray" onclick="fecharModal()">Cancelar</button>
+    </div>
+
+    <div id="modal-movimentacao" style="display:none;">
+      <div style="background:#f9f9f9;border-radius:8px;padding:11px;margin-bottom:10px;">
+        <div style="font-weight:700;font-size:0.97rem;" id="mov-nome"></div>
+        <div style="font-size:0.8rem;color:#888;" id="mov-estoque-atual"></div>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-btn sel-entrada" id="toggle-entrada" onclick="setTipo('entrada')">📥 Entrada</div>
+        <div class="toggle-btn" id="toggle-saida" onclick="setTipo('saida')">📤 Saída</div>
+      </div>
+      <div id="destino-field" style="display:none;margin-top:10px;">
+        <label>Unidade Destino</label>
+        <select id="mov-destino">
+          <option value="Prensadão Norte">Prensadão Norte</option>
+          <option value="Prensadão Sul">Prensadão Sul</option>
+          <option value="Prensadão Leste">Prensadão Leste</option>
+          <option value="Outra unidade">Outra unidade</option>
+        </select>
+      </div>
+      <label>Quantidade *</label>
+      <input type="number" id="mov-qtd" placeholder="Ex: 5 ou 2.5" step="0.01" min="0.01" />
+      <div id="mov-unidade-label" style="font-size:0.76rem;color:#888;margin-top:3px;"></div>
+      <label>Observação (opcional)</label>
+      <input type="text" id="mov-obs" placeholder="Ex: NF 12345, Fornecedor..." />
+      <button class="btn btn-green" onclick="registrarMovimentacao()" style="margin-top:14px;">✅ Confirmar</button>
+      <button class="btn btn-gray" onclick="fecharModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── STORAGE ──
+const KEY_PROD = 'prensadao_produtos';
+const KEY_HIST = 'prensadao_historico';
+const getProdutos  = () => JSON.parse(localStorage.getItem(KEY_PROD) || '{}');
+const getHistorico = () => JSON.parse(localStorage.getItem(KEY_HIST) || '[]');
+const saveProdutos  = d => localStorage.setItem(KEY_PROD, JSON.stringify(d));
+const saveHistorico = d => localStorage.setItem(KEY_HIST, JSON.stringify(d));
+
+// ── TABS ──
+function showTab(name, el) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  if (name === 'estoque')   renderEstoque();
+  if (name === 'historico') renderHistorico();
+  if (name !== 'scanner')   stopScanner();
+}
+
+// ── SCANNER (API nativa BarcodeDetector) ──
+let stream = null;
+let scanInterval = null;
+let lastCode = '';
+let lastCodeTime = 0;
+
+async function startScanner() {
+  try {
+    setScanStatus('Solicitando permissão da câmera...');
+
+    // Pedir acesso à câmera traseira
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+
+    const video = document.getElementById('scanner-video');
+    video.srcObject = stream;
+    await video.play();
+
+    document.getElementById('video-container').style.display = 'block';
+    document.getElementById('btn-start').style.display = 'none';
+    document.getElementById('btn-stop').style.display  = 'block';
+    setScanStatus('📷 Aponte para o código de barras...');
+
+    // Verificar suporte ao BarcodeDetector
+    if ('BarcodeDetector' in window) {
+      startBarcodeDetector(video);
+    } else {
+      // Fallback: ZXing via CDN
+      setScanStatus('Carregando leitor...');
+      loadZXing(video);
+    }
+  } catch (err) {
+    setScanStatus('❌ Sem acesso à câmera. Use o campo manual abaixo.');
+    showToast('Câmera não autorizada', 'error');
+  }
+}
+
+function startBarcodeDetector(video) {
+  const detector = new BarcodeDetector({
+    formats: ['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e','itf','codabar']
+  });
+  scanInterval = setInterval(async () => {
+    if (video.readyState < 2) return;
+    try {
+      const barcodes = await detector.detect(video);
+      if (barcodes.length > 0) {
+        const code = barcodes[0].rawValue;
+        const now = Date.now();
+        if (code === lastCode && now - lastCodeTime < 3000) return;
+        lastCode = code;
+        lastCodeTime = now;
+        stopScanner();
+        processBarcode(code);
+      }
+    } catch(e) {}
+  }, 300);
+}
+
+function loadZXing(video) {
+  const script = document.createElement('script');
+  script.src = 'https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js';
+  script.onload = () => {
+    const hints = new Map();
+    const codeReader = new ZXing.BrowserMultiFormatReader();
+    codeReader.decodeFromVideoElement(video, (result, err) => {
+      if (result) {
+        const code = result.getText();
+        const now = Date.now();
+        if (code === lastCode && now - lastCodeTime < 3000) return;
+        lastCode = code;
+        lastCodeTime = now;
+        stopScanner();
+        processBarcode(code);
+      }
+    });
+    window._zxingReader = codeReader;
+    setScanStatus('📷 Aponte para o código de barras...');
+  };
+  script.onerror = () => {
+    setScanStatus('⚠️ Use o campo manual abaixo para digitar o código.');
+  };
+  document.head.appendChild(script);
+}
+
+function stopScanner() {
+  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+  if (window._zxingReader) { try { window._zxingReader.reset(); } catch(e){} window._zxingReader = null; }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  const video = document.getElementById('scanner-video');
+  video.srcObject = null;
+  document.getElementById('video-container').style.display = 'none';
+  document.getElementById('btn-start').style.display = 'block';
+  document.getElementById('btn-stop').style.display  = 'none';
+  setScanStatus('Toque em "Iniciar Câmera" para escanear');
+}
+
+function setScanStatus(msg) {
+  document.getElementById('scan-status').textContent = msg;
+}
+
+function processBarcode(code) {
+  code = String(code).trim();
+  if (!code) return;
+  stopScanner();
+  const produtos = getProdutos();
+  if (produtos[code]) abrirMovimentacao(code);
+  else abrirCadastro(code);
+}
+
+// ── MODAL ──
+let currentCode = '';
+let tipoAtual = 'entrada';
+
+function abrirCadastro(code) {
+  currentCode = code;
+  document.getElementById('modal-title').textContent    = '🆕 Novo Produto';
+  document.getElementById('modal-subtitle').textContent = 'Código: ' + code;
+  document.getElementById('modal-cadastro').style.display     = 'block';
+  document.getElementById('modal-movimentacao').style.display = 'none';
+  document.getElementById('prod-nome').value = '';
+  document.getElementById('prod-qtd-inicial').value = '0';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function abrirMovimentacao(code) {
+  currentCode = code;
+  const p = getProdutos()[code];
+  document.getElementById('modal-title').textContent    = '📦 Movimentação';
+  document.getElementById('modal-subtitle').textContent = 'Código: ' + code;
+  document.getElementById('mov-nome').textContent          = p.nome;
+  document.getElementById('mov-estoque-atual').textContent = 'Estoque atual: ' + fmtQ(p.estoque, p.unidade);
+  document.getElementById('mov-unidade-label').textContent = 'Unidade: ' + p.unidade;
+  document.getElementById('mov-qtd').value = '';
+  document.getElementById('mov-obs').value = '';
+  setTipo('entrada');
+  document.getElementById('modal-cadastro').style.display     = 'none';
+  document.getElementById('modal-movimentacao').style.display = 'block';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function fecharModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  currentCode = '';
+}
+
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) fecharModal();
+});
+
+function setTipo(tipo) {
+  tipoAtual = tipo;
+  document.getElementById('toggle-entrada').className = 'toggle-btn' + (tipo === 'entrada' ? ' sel-entrada' : '');
+  document.getElementById('toggle-saida').className   = 'toggle-btn' + (tipo === 'saida'   ? ' sel-saida'   : '');
+  document.getElementById('destino-field').style.display = tipo === 'saida' ? 'block' : 'none';
+}
+
+// ── CADASTRAR ──
+function cadastrarProduto() {
+  const nome      = document.getElementById('prod-nome').value.trim();
+  const unidade   = document.getElementById('prod-unidade').value;
+  const categoria = document.getElementById('prod-categoria').value;
+  const qtdInicial = parseFloat(document.getElementById('prod-qtd-inicial').value) || 0;
+  if (!nome) { showToast('Informe o nome do produto!', 'error'); return; }
+  const produtos = getProdutos();
+  produtos[currentCode] = { nome, unidade, categoria, estoque: qtdInicial, codigo: currentCode, criadoEm: new Date().toISOString() };
+  saveProdutos(produtos);
+  if (qtdInicial > 0) addHistorico(currentCode, nome, 'entrada', qtdInicial, unidade, 'Cadastro inicial', '');
+  fecharModal();
+  showToast('✅ ' + nome + ' cadastrado!', 'success');
+}
+
+// ── MOVIMENTAÇÃO ──
+function registrarMovimentacao() {
+  const tipo    = tipoAtual;
+  const qtd     = parseFloat(document.getElementById('mov-qtd').value);
+  const obs     = document.getElementById('mov-obs').value.trim();
+  const destino = document.getElementById('mov-destino').value;
+  if (!qtd || qtd <= 0) { showToast('Informe a quantidade!', 'error'); return; }
+  const produtos = getProdutos();
+  const p = produtos[currentCode];
+  if (tipo === 'saida' && qtd > p.estoque) { showToast('Quantidade maior que o estoque!', 'error'); return; }
+  if (tipo === 'entrada') p.estoque += qtd; else p.estoque -= qtd;
+  saveProdutos(produtos);
+  const obsTexto = tipo === 'saida' ? 'Para: ' + destino + (obs ? ' | ' + obs : '') : obs;
+  addHistorico(currentCode, p.nome, tipo, qtd, p.unidade, obsTexto, destino);
+  fecharModal();
+  showToast('✅ ' + (tipo === 'entrada' ? 'Entrada' : 'Saída') + ' de ' + fmtQ(qtd, p.unidade) + '!', 'success');
+}
+
+// ── HISTÓRICO ──
+function addHistorico(codigo, nome, tipo, qtd, unidade, obs, destino) {
+  const hist = getHistorico();
+  hist.unshift({ id: Date.now(), codigo, nome, tipo, qtd, unidade, obs, destino, data: new Date().toISOString() });
+  saveHistorico(hist);
+}
+
+function renderHistorico() {
+  const hist = getHistorico();
+  const el   = document.getElementById('historico-lista');
+  if (!hist.length) { el.innerHTML = '<div class="empty"><span>📋</span>Nenhuma movimentação ainda.</div>'; return; }
+  el.innerHTML = hist.map(h => `
+    <div class="hist-item">
+      <div class="top">
+        <h4>${h.nome}</h4>
+        <span class="badge badge-${h.tipo}">${h.tipo === 'entrada' ? '📥 Entrada' : '📤 Saída'}</span>
+      </div>
+      <div style="font-size:0.88rem;font-weight:700;margin-top:3px;">${fmtQ(h.qtd, h.unidade)}</div>
+      ${h.obs ? '<small>📝 ' + h.obs + '</small>' : ''}
+      <small>🕐 ${fmtD(h.data)}</small>
+    </div>`).join('');
+}
+
+// ── ESTOQUE ──
+function renderEstoque() {
+  const produtos = getProdutos();
+  const busca    = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const el       = document.getElementById('estoque-lista');
+  const lista    = Object.values(produtos).filter(p =>
+    p.nome.toLowerCase().includes(busca) || p.categoria.toLowerCase().includes(busca));
+  if (!lista.length) {
+    el.innerHTML = '<div class="empty"><span>📦</span>Nenhum produto cadastrado.<br>Escaneie um código para começar!</div>';
+    return;
+  }
+  const grupos = {};
+  lista.forEach(p => { if (!grupos[p.categoria]) grupos[p.categoria] = []; grupos[p.categoria].push(p); });
+  let html = '';
+  for (const [cat, prods] of Object.entries(grupos)) {
+    html += '<div class="section-title">' + cat + '</div>';
+    prods.forEach(p => {
+      const borda = p.estoque <= 0 ? 'border-left:4px solid #b71c1c;' : p.estoque < 5 ? 'border-left:4px solid #ff9800;' : '';
+      html += `<div class="produto-card" style="${borda}" onclick="abrirMovimentacao('${p.codigo}')">
+        <div class="produto-info"><h4>${p.nome}</h4><small>${p.codigo}</small></div>
+        <div class="produto-qty">${p.estoque % 1 === 0 ? p.estoque : p.estoque.toFixed(2)}<small>${p.unidade}</small></div>
+      </div>`;
+    });
+  }
+  el.innerHTML = html;
+}
+
+// ── EXPORTAR ──
+function exportCSV(tipo) {
+  let csv = '', filename = '';
+  if (tipo === 'estoque') {
+    csv = 'Codigo,Nome,Categoria,Estoque,Unidade,Cadastrado Em\n';
+    Object.values(getProdutos()).forEach(p => {
+      csv += `"${p.codigo}","${p.nome}","${p.categoria}",${p.estoque},"${p.unidade}","${fmtD(p.criadoEm)}"\n`;
+    });
+    filename = 'estoque_cozinha_' + dataHoje() + '.csv';
+  } else {
+    csv = 'Data,Produto,Codigo,Tipo,Quantidade,Unidade,Destino,Observacao\n';
+    getHistorico().forEach(h => {
+      csv += `"${fmtD(h.data)}","${h.nome}","${h.codigo}","${h.tipo}",${h.qtd},"${h.unidade}","${h.destino||''}","${h.obs||''}"\n`;
+    });
+    filename = 'historico_estoque_' + dataHoje() + '.csv';
+  }
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a'); a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ Arquivo baixado!', 'success');
+}
+
+function limparDados() {
+  if (!confirm('Tem certeza? Isso apaga TUDO!')) return;
+  localStorage.removeItem(KEY_PROD);
+  localStorage.removeItem(KEY_HIST);
+  renderEstoque(); renderHistorico();
+  showToast('Dados apagados.', 'error');
+}
+
+// ── UTILS ──
+const fmtQ = (qtd, un) => (qtd % 1 === 0 ? qtd : parseFloat(qtd).toFixed(2)) + ' ' + un;
+const fmtD = iso => { const d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}); };
+const dataHoje = () => new Date().toISOString().split('T')[0];
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + type;
+  setTimeout(() => { t.className = ''; }, 2800);
+}
+
+renderEstoque();
+</script>
+</body>
+</html>
