@@ -341,9 +341,60 @@ function processBarcode(code) {
   if (!code) return;
   beep();
   stopScanner();
+
+  // Detectar etiqueta de balança: EAN-13 começa com 2, peso nos dígitos 7-11
+  const pesoBalanca = extrairPesoBalanca(code);
+  if (pesoBalanca !== null) {
+    // Código interno da balança: usar os 6 primeiros dígitos como chave do produto
+    const codProduto = code.substring(0, 7);
+    const produtos = getProdutos();
+    if (produtos[codProduto]) {
+      lancarPesoBalanca(codProduto, pesoBalanca);
+    } else {
+      // Produto não cadastrado ainda — abrir cadastro com peso pré-preenchido
+      abrirCadastroBalanca(codProduto, pesoBalanca);
+    }
+    return;
+  }
+
   const produtos = getProdutos();
   if (produtos[code]) abrirMovimentacao(code);
   else abrirCadastro(code);
+}
+
+// Extrai o peso de um código EAN-13 de balança (começa com 2)
+// Formato: 2 PPPPP KKKKK C  onde KKKKK = peso em gramas (ex: 01214 = 1.214 kg)
+function extrairPesoBalanca(code) {
+  if (code.length !== 13) return null;
+  if (code[0] !== '2') return null;
+  // Dígitos 7 a 11 = peso em gramas
+  const pesoStr = code.substring(7, 12);
+  const pesoG   = parseInt(pesoStr, 10);
+  if (isNaN(pesoG) || pesoG === 0) return null;
+  return pesoG / 1000; // retorna em kg
+}
+
+function lancarPesoBalanca(codProduto, pesoKg) {
+  const produtos = getProdutos();
+  const p = produtos[codProduto];
+  p.estoque += pesoKg;
+  saveProdutos(produtos);
+  addHistorico(codProduto, p.nome, 'entrada', pesoKg, 'kg', 'Etiqueta balança', '');
+  showToast('✅ +' + pesoKg.toFixed(3) + ' kg — ' + p.nome, 'success');
+}
+
+function abrirCadastroBalanca(codProduto, pesoKg) {
+  currentCode = codProduto;
+  document.getElementById('modal-title').textContent    = '🆕 Novo Produto (Balança)';
+  document.getElementById('modal-subtitle').textContent = 'Peso lido: ' + pesoKg.toFixed(3) + ' kg';
+  document.getElementById('modal-cadastro').style.display     = 'block';
+  document.getElementById('modal-movimentacao').style.display = 'none';
+  document.getElementById('prod-nome').value = '';
+  document.getElementById('prod-qtd-inicial').value = pesoKg.toFixed(3);
+  // Forçar unidade kg
+  document.getElementById('prod-unidade').value = 'kg';
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('prod-nome').focus(), 300);
 }
 
 // ── MODAL ──
