@@ -145,8 +145,15 @@
 <!-- EXPORTAR -->
 <div id="tab-exportar" class="screen">
   <div class="card">
-    <h3>💾 Exportar Dados</h3>
-    <p style="font-size:0.83rem;color:#555;margin-bottom:10px;">Baixe para abrir no Excel ou Google Sheets.</p>
+    <h3>☁️ Google Sheets</h3>
+    <p style="font-size:0.83rem;color:#555;margin-bottom:10px;">Salva as entradas de hoje na planilha e zera o estoque.</p>
+    <button class="btn btn-red" onclick="enviarParaSheets(true)">📤 Fechar Dia e Enviar para Sheets</button>
+    <button class="btn btn-green" onclick="enviarParaSheets(false)" style="margin-top:8px;">📊 Só Enviar (sem zerar)</button>
+    <p style="font-size:0.75rem;color:#888;margin-top:8px;text-align:center;">⏰ Automático todo dia às 23:59</p>
+  </div>
+  <div class="card">
+    <h3>💾 Exportar CSV</h3>
+    <p style="font-size:0.83rem;color:#555;margin-bottom:10px;">Baixe para abrir no Excel.</p>
     <button class="btn btn-green" onclick="exportCSV('estoque')">📦 Estoque Atual (consolidado)</button>
     <button class="btn btn-blue" onclick="exportCSV('entradas')" style="margin-top:8px;">📥 Entradas Consolidadas</button>
     <button class="btn btn-orange" onclick="exportCSV('historico')" style="margin-top:8px;">📋 Histórico Completo</button>
@@ -238,13 +245,120 @@
 <div id="toast"></div>
 
 <script>
+// ── CONFIG ──
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzQFQYgpQOOyP6tiSfqCKiV8vgBm_279Goomw3ETIdAfGQRMRwZ5v6dudSO48i-uR0wKQ/exec';
+
 // ── STORAGE ──
-const KEY_PROD = 'prensadao_produtos';
-const KEY_HIST = 'prensadao_historico';
+const KEY_PROD       = 'prensadao_produtos';
+const KEY_HIST       = 'prensadao_historico';
+const KEY_ULTIMO_ENV = 'prensadao_ultimo_envio';
 const getProdutos  = () => JSON.parse(localStorage.getItem(KEY_PROD) || '{}');
 const getHistorico = () => JSON.parse(localStorage.getItem(KEY_HIST) || '[]');
 const saveProdutos  = d => localStorage.setItem(KEY_PROD, JSON.stringify(d));
 const saveHistorico = d => localStorage.setItem(KEY_HIST, JSON.stringify(d));
+
+// ── ENVIO AUTOMÁTICO PARA SHEETS ──
+async function enviarParaSheets(zerarDepois = false) {
+  const produtos = getProdutos();
+  const lista = Object.values(produtos);
+  if (!lista.length) {
+    if (zerarDepois) zerarEstoque();
+    return;
+  }
+
+  const agora   = new Date();
+  const dd      = String(agora.getDate()).padStart(2,'0');
+  const mm      = String(agora.getMonth()+1).padStart(2,'0');
+  const yyyy    = agora.getFullYear();
+  const hoje    = dd + '-' + mm;
+  const dataFull= dd + '/' + mm + '/' + yyyy;
+
+  // Consolidar entradas do histórico do dia
+  const hist = getHistorico().filter(h => {
+    const d = new Date(h.data);
+    return h.tipo === 'entrada' &&
+      d.getDate() === agora.getDate() &&
+      d.getMonth() === agora.getMonth() &&
+      d.getFullYear() === agora.getFullYear();
+  });
+
+  const consolidado = {};
+  hist.forEach(h => {
+    if (!consolidado[h.codigo]) {
+      consolidado[h.codigo] = { nome: h.nome, categoria: '', qtd: 0, unidade: h.unidade };
+    }
+    consolidado[h.codigo].qtd += parseFloat(h.qtd);
+  });
+  // Preencher categoria
+  Object.values(consolidado).forEach(c => {
+    const p = Object.values(produtos).find(x => x.nome === c.nome);
+    if (p) c.categoria = p.categoria;
+    c.qtd = parseFloat(c.qtd.toFixed(3));
+  });
+
+  const payload = {
+    data: hoje,
+    dataFull: dataFull,
+    produtos: Object.values(consolidado)
+  };
+
+  try {
+    showToast('📤 Enviando para o Sheets...', '');
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'text/plain' }
+    });
+    const result = await resp.json();
+    if (result.ok) {
+      localStorage.setItem(KEY_ULTIMO_ENV, new Date().toISOString());
+      showToast('✅ Salvo no Google Sheets!', 'success');
+      if (zerarDepois) zerarEstoque();
+    } else {
+      showToast('⚠️ Erro ao salvar no Sheets', 'error');
+    }
+  } catch(e) {
+    showToast('⚠️ Sem conexão com Sheets', 'error');
+  }
+}
+
+function zerarEstoque() {
+  const produtos = getProdutos();
+  Object.keys(produtos).forEach(k => { produtos[k].estoque = 0; });
+  saveProdutos(produtos);
+  renderEstoque();
+  showToast('🔄 Estoque zerado!', '');
+}
+
+// Verificar se precisa fechar o dia (ao abrir o app)
+function verificarFechamentoDia() {
+  const ultimoEnvio = localStorage.getItem(KEY_ULTIMO_ENV);
+  if (!ultimoEnvio) return;
+  const ultimo = new Date(ultimoEnvio);
+  const agora  = new Date();
+  // Se o último envio foi ontem ou antes → avisar que dia não foi fechado
+  if (ultimo.toDateString() !== agora.toDateString() && Object.keys(getProdutos()).length > 0) {
+    const estoqueAtivo = Object.values(getProdutos()).some(p => p.estoque > 0);
+    if (estoqueAtivo) {
+      showToast('⚠️ Estoque do dia anterior não foi zerado!', 'error');
+    }
+  }
+}
+
+// Agendar envio automático à meia-noite
+function agendarMeiaNOite() {
+  const agora = new Date();
+  const meiaNOite = new Date(agora);
+  meiaNOite.setHours(23, 59, 0, 0);
+  const msAte = meiaNOite - agora;
+  if (msAte > 0) {
+    setTimeout(() => {
+      enviarParaSheets(true); // envia e zera
+      // Reagendar para o próximo dia
+      setInterval(() => enviarParaSheets(true), 24 * 60 * 60 * 1000);
+    }, msAte);
+  }
+}
 
 // ── TABS ──
 function showTab(name, el) {
@@ -681,6 +795,8 @@ function showToast(msg, type = '') {
 }
 
 renderEstoque();
+verificarFechamentoDia();
+agendarMeiaNOite();
 
 // ── OCR PESO BALANÇA ──
 let ocrStream = null;
