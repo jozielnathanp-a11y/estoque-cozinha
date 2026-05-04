@@ -219,6 +219,19 @@
       <button class="btn btn-green" onclick="registrarMovimentacao()" style="margin-top:14px;">✅ Confirmar</button>
       <button class="btn btn-gray" onclick="fecharModal()">Cancelar</button>
     </div>
+
+    <!-- EDITAR ESTOQUE -->
+    <div id="modal-edicao" style="display:none;">
+      <div style="background:#f9f9f9;border-radius:8px;padding:11px;margin-bottom:10px;">
+        <div style="font-weight:700;font-size:0.97rem;" id="edit-nome"></div>
+        <div style="font-size:0.8rem;color:#888;" id="edit-estoque-atual"></div>
+      </div>
+      <label>Novo valor do estoque *</label>
+      <input type="number" id="edit-novo-estoque" placeholder="Ex: 3.5" step="0.001" min="0" />
+      <div id="edit-unidade-label" style="font-size:0.76rem;color:#888;margin-top:3px;"></div>
+      <button class="btn btn-green" onclick="salvarEdicaoEstoque()" style="margin-top:14px;">✅ Salvar</button>
+      <button class="btn btn-gray" onclick="fecharModal()">Cancelar</button>
+    </div>
   </div>
 </div>
 
@@ -437,26 +450,12 @@ function abrirCadastro(code) {
   document.getElementById('modal-overlay').classList.add('open');
 }
 
-// Unidades que lançam automaticamente sem perguntar quantidade
-const UNIDADES_AUTO = ['pct','un','cx','L'];
-
 function abrirMovimentacao(code) {
   currentCode = code;
   const p = getProdutos()[code];
 
-  // Se não é kg/g → lança +1 automaticamente
-  if (UNIDADES_AUTO.includes(p.unidade)) {
-    p.estoque += 1;
-    const produtos = getProdutos();
-    produtos[code] = p;
-    saveProdutos(produtos);
-    addHistorico(code, p.nome, 'entrada', 1, p.unidade, 'Lançamento rápido', '');
-    showToast('✅ +1 ' + p.unidade + ' — ' + p.nome, 'success');
-    return; // não abre modal
-  }
-
-  // kg ou g → abre modal para digitar quantidade
-  document.getElementById('modal-title').textContent    = '⚖️ Quantidade';
+  // Sempre abre modal para confirmar quantidade
+  document.getElementById('modal-title').textContent    = '📦 Movimentação';
   document.getElementById('modal-subtitle').textContent = p.nome;
   document.getElementById('mov-nome').textContent          = p.nome;
   document.getElementById('mov-estoque-atual').textContent = 'Estoque atual: ' + fmtQ(p.estoque, p.unidade);
@@ -473,6 +472,38 @@ function abrirMovimentacao(code) {
 function fecharModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   currentCode = '';
+}
+
+function editarEstoque(code) {
+  currentCode = code;
+  const p = getProdutos()[code];
+  document.getElementById('modal-title').textContent    = '✏️ Editar Estoque';
+  document.getElementById('modal-subtitle').textContent = p.nome;
+  document.getElementById('edit-nome').textContent          = p.nome;
+  document.getElementById('edit-estoque-atual').textContent = 'Estoque atual: ' + fmtQ(p.estoque, p.unidade);
+  document.getElementById('edit-unidade-label').textContent = 'Unidade: ' + p.unidade;
+  const qtdAtual = p.estoque % 1 === 0 ? p.estoque : parseFloat(p.estoque).toFixed(3);
+  document.getElementById('edit-novo-estoque').value = qtdAtual;
+  document.getElementById('modal-cadastro').style.display     = 'none';
+  document.getElementById('modal-movimentacao').style.display = 'none';
+  document.getElementById('modal-edicao').style.display       = 'block';
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('edit-novo-estoque').focus(), 300);
+}
+
+function salvarEdicaoEstoque() {
+  const novoValor = parseFloat(document.getElementById('edit-novo-estoque').value);
+  if (isNaN(novoValor) || novoValor < 0) { showToast('Valor inválido!', 'error'); return; }
+  const produtos = getProdutos();
+  const p = produtos[currentCode];
+  const anterior = p.estoque;
+  p.estoque = novoValor;
+  saveProdutos(produtos);
+  addHistorico(currentCode, p.nome, novoValor >= anterior ? 'entrada' : 'saida',
+    Math.abs(novoValor - anterior), p.unidade, 'Ajuste manual de estoque', '');
+  fecharModal();
+  renderEstoque();
+  showToast('✅ Estoque atualizado: ' + fmtQ(novoValor, p.unidade), 'success');
 }
 
 document.getElementById('modal-overlay').addEventListener('click', function(e) {
@@ -560,9 +591,18 @@ function renderEstoque() {
     html += '<div class="section-title">' + cat + '</div>';
     prods.forEach(p => {
       const borda = p.estoque <= 0 ? 'border-left:4px solid #b71c1c;' : p.estoque < 5 ? 'border-left:4px solid #ff9800;' : '';
-      html += `<div class="produto-card" style="${borda}" onclick="abrirMovimentacao('${p.codigo}')">
-        <div class="produto-info"><h4>${p.nome}</h4><small>${p.codigo}</small></div>
-        <div class="produto-qty">${p.estoque % 1 === 0 ? p.estoque : p.estoque.toFixed(2)}<small>${p.unidade}</small></div>
+      const qtdStr = p.estoque % 1 === 0 ? p.estoque : parseFloat(p.estoque).toFixed(3);
+      html += `<div class="produto-card" style="${borda}">
+        <div class="produto-info" onclick="abrirMovimentacao('${p.codigo}')" style="flex:1;cursor:pointer;">
+          <h4>${p.nome}</h4>
+          <small>${p.codigo}</small>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="produto-qty" onclick="abrirMovimentacao('${p.codigo}')" style="cursor:pointer;">
+            ${qtdStr}<small>${p.unidade}</small>
+          </div>
+          <button onclick="editarEstoque('${p.codigo}')" style="background:#f5f5f5;border:1.5px solid #ddd;border-radius:8px;padding:6px 9px;cursor:pointer;font-size:0.85rem;" title="Editar estoque">✏️</button>
+        </div>
       </div>`;
     });
   }
