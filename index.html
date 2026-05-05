@@ -832,6 +832,17 @@ function showToast(msg, type = '') {
 }
 
 renderEstoque();
+// ── PRÉ-CADASTRO DE PRODUTOS ──
+(function() {
+  const predefinidos = {"2000000055268":{"codigo":"2000000055268","nome":"Embalagem 18x16 c/100","categoria":"Embalagens","estoque":1,"unidade":"pct","criadoEm":"2026-05-04T21:53:00-03:00"},"2000000001289":{"codigo":"2000000001289","nome":"Embalagem 22x16 c/100","categoria":"Embalagens","estoque":1,"unidade":"pct","criadoEm":"2026-05-04T21:53:00-03:00"},"2000000176680":{"codigo":"2000000176680","nome":"Embalagem 12x20 c/100","categoria":"Embalagens","estoque":1,"unidade":"pct","criadoEm":"2026-05-04T21:53:00-03:00"},"2000000176659":{"codigo":"2000000176659","nome":"Embalagem 10x20 c/100","categoria":"Embalagens","estoque":1,"unidade":"pct","criadoEm":"2026-05-04T21:53:00-03:00"}};
+  const atuais = getProdutos();
+  let adicionados = 0;
+  Object.entries(predefinidos).forEach(([cod, prod]) => {
+    if (!atuais[cod]) { atuais[cod] = prod; adicionados++; }
+  });
+  if (adicionados > 0) saveProdutos(atuais);
+})();
+
 verificarFechamentoDia();
 agendarMeiaNOite();
 
