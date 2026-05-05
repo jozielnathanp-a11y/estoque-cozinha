@@ -131,10 +131,12 @@
       <button class="btn btn-red" id="btn-start" onclick="startScanner()" style="margin-top:0;">▶ Iniciar Câmera</button>
       <button class="btn btn-gray" id="btn-stop" onclick="stopScanner()" style="display:none;">⏹ Parar Câmera</button>
       <p id="scan-status" style="font-size:0.76rem;color:#888;margin-top:7px;text-align:center;">Toque em "Iniciar Câmera" para escanear</p>
-      <div style="margin-top:10px;">
-        <input type="number" id="manual-code" placeholder="Ou digite o código manualmente" inputmode="numeric" />
-        <button class="btn btn-blue" onclick="processBarcode(document.getElementById('manual-code').value)" style="margin-top:8px;">🔍 Buscar</button>
-      </div>
+    </div>
+
+    <div class="card">
+      <h3>⌨️ Código Manual</h3>
+      <input type="number" id="manual-code" placeholder="Digite o código de barras" inputmode="numeric" style="font-size:1rem;" />
+      <button class="btn btn-blue" onclick="processBarcode(document.getElementById('manual-code').value)" style="margin-top:8px;">🔍 Buscar Produto</button>
     </div>
 
     <div class="card">
