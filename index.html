@@ -146,96 +146,66 @@
 <!-- CONTAGEM -->
 <div id="tab-contagem" class="screen">
 
+  <!-- Cabeçalho -->
   <div class="card" style="margin-top:0;">
     <h3>🧮 Contagem de Bebidas</h3>
     <label>Colaborador</label>
     <input type="text" id="cnt-colaborador" placeholder="Seu nome" />
     <label>Tipo de Contagem</label>
     <select id="cnt-tipo">
-      <option value="Entrada de refrigerantes e doces">Entrada de refrigerantes e doces</option>
+      <option value="Entrada de refrigerantes">Entrada de refrigerantes</option>
       <option value="Contagem de estoque">Contagem de estoque</option>
-      <option value="Entrada de doces">Entrada de doces</option>
-      <option value="Entrada de bobinas">Entrada de bobinas</option>
     </select>
   </div>
 
+  <!-- Scanner -->
   <div class="card">
-    <div class="section-title">🥤 Refrigerantes Lata</div>
-    <label>Coca Cola Lata</label><input type="number" class="cnt-field" data-produto="Coca Cola Lata" data-media="24" min="0" placeholder="0" />
-    <label>Coca Cola Zero Lata</label><input type="number" class="cnt-field" data-produto="Coca Cola Zero Lata" data-media="24" min="0" placeholder="0" />
-    <label>Fanta Laranja Lata</label><input type="number" class="cnt-field" data-produto="Fanta Laranja Lata" data-media="12" min="0" placeholder="0" />
-    <label>Fanta Uva Lata</label><input type="number" class="cnt-field" data-produto="Fanta Uva Lata" data-media="12" min="0" placeholder="0" />
-    <label>Fanta Maracujá Lata</label><input type="number" class="cnt-field" data-produto="Fanta Maracujá Lata" data-media="12" min="0" placeholder="0" />
-    <label>Fanta Guaraná Lata</label><input type="number" class="cnt-field" data-produto="Fanta Guaraná Lata" data-media="12" min="0" placeholder="0" />
-    <label>Fanta Guaraná Zero Lata</label><input type="number" class="cnt-field" data-produto="Fanta Guaraná Zero Lata" data-media="12" min="0" placeholder="0" />
-    <label>Sprite Lata</label><input type="number" class="cnt-field" data-produto="Sprite Lata" data-media="12" min="0" placeholder="0" />
-    <label>Sprite Zero Lata</label><input type="number" class="cnt-field" data-produto="Sprite Zero Lata" data-media="12" min="0" placeholder="0" />
-    <label>Schweppes Lata</label><input type="number" class="cnt-field" data-produto="Schweppes Lata" data-media="6" min="0" placeholder="0" />
+    <h3>📷 Escanear Produto</h3>
+    <div id="cnt-video-container" style="display:none;">
+      <video id="cnt-scanner-video" autoplay muted playsinline></video>
+      <div id="scan-overlay"><div id="scan-frame"></div><div id="scan-line"></div></div>
+    </div>
+    <button class="btn btn-red" id="cnt-btn-start" onclick="startCntScanner()">▶ Iniciar Câmera</button>
+    <button class="btn btn-gray" id="cnt-btn-stop" onclick="stopCntScanner()" style="display:none;">⏹ Parar Câmera</button>
+    <p id="cnt-scan-status" style="font-size:0.76rem;color:#888;margin-top:7px;text-align:center;">Aponte para o código de barras da bebida</p>
+    <div style="margin-top:10px;">
+      <input type="number" id="cnt-manual-code" placeholder="Ou digite o código manualmente" inputmode="numeric" />
+      <button class="btn btn-blue" onclick="processCntBarcode(document.getElementById('cnt-manual-code').value)" style="margin-top:8px;">🔍 Buscar</button>
+    </div>
   </div>
 
-  <div class="card">
-    <div class="section-title">🥤 KS 290ml</div>
-    <label>Coca Cola KS 290ml</label><input type="number" class="cnt-field" data-produto="Coca Cola KS 290ml" data-media="18" min="0" placeholder="0" />
-    <label>Coca Cola Zero KS 290ml</label><input type="number" class="cnt-field" data-produto="Coca Cola Zero KS 290ml" data-media="18" min="0" placeholder="0" />
-    <label>Sprite KS 290ml</label><input type="number" class="cnt-field" data-produto="Sprite KS 290ml" data-media="18" min="0" placeholder="0" />
+  <!-- Modal quantidade contagem -->
+  <div id="cnt-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:16px;padding:24px;width:88%;max-width:360px;">
+      <h3 id="cnt-modal-nome" style="margin:0 0 4px;font-size:1.1rem;color:#b71c1c;"></h3>
+      <p id="cnt-modal-codigo" style="font-size:0.78rem;color:#888;margin:0 0 16px;"></p>
+      <label>Quantidade</label>
+      <input type="number" id="cnt-modal-qtd" min="1" value="1" inputmode="numeric" style="font-size:1.4rem;text-align:center;padding:10px;" />
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn btn-green" style="flex:1;" onclick="confirmarCntItem()">✅ Adicionar</button>
+        <button class="btn btn-gray" style="flex:1;" onclick="fecharCntModal()">Cancelar</button>
+      </div>
+    </div>
   </div>
 
+  <!-- Lista de itens -->
   <div class="card">
-    <div class="section-title">💧 Água</div>
-    <label>Água c/ Gás</label><input type="number" class="cnt-field" data-produto="Água c/ Gás" data-media="12" min="0" placeholder="0" />
-    <label>Água s/ Gás</label><input type="number" class="cnt-field" data-produto="Água s/ Gás" data-media="12" min="0" placeholder="0" />
+    <h3>📋 Itens Adicionados</h3>
+    <div id="cnt-lista-itens" style="min-height:40px;">
+      <p style="color:#aaa;font-size:0.85rem;text-align:center;">Nenhum item ainda</p>
+    </div>
   </div>
 
-  <div class="card">
-    <div class="section-title">🥤 Coca Litro</div>
-    <label>Coca Cola 1L Retornável</label><input type="number" class="cnt-field" data-produto="Coca Cola 1L Retornável" data-media="36" min="0" placeholder="0" />
-    <label>Coca Zero 1L Pet</label><input type="number" class="cnt-field" data-produto="Coca Zero 1L Pet" data-media="18" min="0" placeholder="0" />
-    <label>Coca Cola 1L Pet</label><input type="number" class="cnt-field" data-produto="Coca Cola 1L Pet" data-media="12" min="0" placeholder="0" />
-  </div>
-
-  <div class="card">
-    <div class="section-title">🍺 Cervejas</div>
-    <label>Cerveja Eisenbahn Pilsen</label><input type="number" class="cnt-field" data-produto="Cerveja Eisenbahn Pilsen" data-media="18" min="0" placeholder="0" />
-    <label>Cerveja Eisenbahn IPA</label><input type="number" class="cnt-field" data-produto="Cerveja Eisenbahn IPA" data-media="12" min="0" placeholder="0" />
-  </div>
-
-  <div class="card">
-    <div class="section-title">🧃 Sucos Kapo</div>
-    <label>Kapo Uva</label><input type="number" class="cnt-field" data-produto="Kapo Uva" data-media="12" min="0" placeholder="0" />
-    <label>Kapo Morango</label><input type="number" class="cnt-field" data-produto="Kapo Morango" data-media="12" min="0" placeholder="0" />
-    <label>Kapo Pirata</label><input type="number" class="cnt-field" data-produto="Kapo Pirata" data-media="12" min="0" placeholder="0" />
-    <label>Kapo Laranja</label><input type="number" class="cnt-field" data-produto="Kapo Laranja" data-media="12" min="0" placeholder="0" />
-  </div>
-
-  <div class="card">
-    <div class="section-title">🍬 Doces</div>
-    <label>Halls</label><input type="number" class="cnt-field" data-produto="Halls" data-media="0" min="0" placeholder="0" />
-    <label>Trident</label><input type="number" class="cnt-field" data-produto="Trident" data-media="0" min="0" placeholder="0" />
-    <label>Pirulito</label><input type="number" class="cnt-field" data-produto="Pirulito" data-media="0" min="0" placeholder="0" />
-    <label>Moranguete</label><input type="number" class="cnt-field" data-produto="Moranguete" data-media="0" min="0" placeholder="0" />
-    <label>Fini</label><input type="number" class="cnt-field" data-produto="Fini" data-media="0" min="0" placeholder="0" />
-    <label>Trufas</label><input type="number" class="cnt-field" data-produto="Trufas" data-media="0" min="0" placeholder="0" />
-  </div>
-
-  <div class="card">
-    <div class="section-title">🧹 Limpeza / Outros</div>
-    <label>Detergente</label><input type="number" class="cnt-field" data-produto="Detergente" data-media="0" min="0" placeholder="0" />
-    <label>Álcool</label><input type="number" class="cnt-field" data-produto="Álcool" data-media="0" min="0" placeholder="0" />
-    <label>Desengordurante</label><input type="number" class="cnt-field" data-produto="Desengordurante" data-media="0" min="0" placeholder="0" />
-    <label>Sabão Pedra</label><input type="number" class="cnt-field" data-produto="Sabão Pedra" data-media="0" min="0" placeholder="0" />
-    <label>Esponja</label><input type="number" class="cnt-field" data-produto="Esponja" data-media="0" min="0" placeholder="0" />
-    <label>Bobina Impressora</label><input type="number" class="cnt-field" data-produto="Bobina Impressora" data-media="0" min="0" placeholder="0" />
-    <label>Bobina Maquininha Cartão</label><input type="number" class="cnt-field" data-produto="Bobina Maquininha Cartão" data-media="0" min="0" placeholder="0" />
-  </div>
-
+  <!-- Relatório -->
   <div class="card" id="cnt-relatorio" style="display:none;">
     <h3>⚠️ Precisa Comprar</h3>
     <div id="cnt-relatorio-lista"></div>
   </div>
 
+  <!-- Ações -->
   <div style="padding:0 14px 20px;">
     <button class="btn btn-green" onclick="enviarContagem()">📤 Enviar Contagem</button>
-    <button class="btn btn-gray" onclick="limparContagem()" style="margin-top:8px;">🔄 Limpar Formulário</button>
+    <button class="btn btn-gray" onclick="limparContagem()" style="margin-top:8px;">🔄 Limpar Tudo</button>
   </div>
 
 </div>
@@ -941,39 +911,182 @@ renderEstoque();
   if (adicionados > 0) saveProdutos(atuais);
 })();
 
-// ── CONTAGEM ──
+// ── CONTAGEM COM SCANNER ──
 const APPS_SCRIPT_CONTAGEM = 'https://script.google.com/macros/s/AKfycbzQFQYgpQOOyP6tiSfqCKiV8vgBm_279Goomw3ETIdAfGQRMRwZ5v6dudSO48i-uR0wKQ/exec';
+
+// Médias mínimas por produto (nome normalizado → {media})
+const MEDIAS_BEBIDAS = {
+  'coca cola lata':24,'coca cola zero lata':24,
+  'fanta laranja lata':12,'fanta uva lata':12,'fanta maracujá lata':12,
+  'fanta guaraná lata':12,'fanta guaraná zero lata':12,
+  'sprite lata':12,'sprite zero lata':12,'schweppes lata':6,
+  'coca cola ks 290ml':18,'coca cola zero ks 290ml':18,'sprite ks 290ml':18,
+  'água c/ gás':12,'água s/ gás':12,
+  'coca cola 1l retornável':36,'coca zero 1l pet':18,'coca cola 1l pet':12,
+  'cerveja eisenbahn pilsen':18,'cerveja eisenbahn ipa':12,
+  'kapo uva':12,'kapo morango':12,'kapo pirata':12,'kapo laranja':12,
+};
+
+let cntItens = []; // [{nome, codigo, qtd, media}]
+let cntStream = null, cntScanInterval = null, cntLastCode = '', cntLastCodeTime = 0;
+let cntItemAtual = null;
+
+function startCntScanner() {
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+  }).then(s => {
+    cntStream = s;
+    const video = document.getElementById('cnt-scanner-video');
+    video.srcObject = s;
+    video.play();
+    document.getElementById('cnt-video-container').style.display = 'block';
+    document.getElementById('cnt-btn-start').style.display = 'none';
+    document.getElementById('cnt-btn-stop').style.display  = 'block';
+    document.getElementById('cnt-scan-status').textContent = '📷 Aponte para o código de barras...';
+
+    if ('BarcodeDetector' in window) {
+      const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','upc_a','upc_e'] });
+      cntScanInterval = setInterval(async () => {
+        if (video.readyState < 2) return;
+        try {
+          const barcodes = await detector.detect(video);
+          if (barcodes.length > 0) {
+            const code = barcodes[0].rawValue;
+            const now = Date.now();
+            if (code === cntLastCode && now - cntLastCodeTime < 3000) return;
+            cntLastCode = code; cntLastCodeTime = now;
+            stopCntScanner();
+            processCntBarcode(code);
+          }
+        } catch(e) {}
+      }, 300);
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js';
+      script.onload = () => {
+        const reader = new ZXing.BrowserMultiFormatReader();
+        reader.decodeFromVideoElement(video, (result, err) => {
+          if (!result) return;
+          const code = result.getText();
+          const now = Date.now();
+          if (code === cntLastCode && now - cntLastCodeTime < 3000) return;
+          cntLastCode = code; cntLastCodeTime = now;
+          reader.reset();
+          stopCntScanner();
+          processCntBarcode(code);
+        });
+      };
+      document.head.appendChild(script);
+    }
+  }).catch(() => {
+    document.getElementById('cnt-scan-status').textContent = '❌ Sem acesso à câmera. Use o campo manual.';
+  });
+}
+
+function stopCntScanner() {
+  if (cntScanInterval) { clearInterval(cntScanInterval); cntScanInterval = null; }
+  if (cntStream) { cntStream.getTracks().forEach(t => t.stop()); cntStream = null; }
+  document.getElementById('cnt-video-container').style.display = 'none';
+  document.getElementById('cnt-btn-start').style.display = 'block';
+  document.getElementById('cnt-btn-stop').style.display  = 'none';
+  document.getElementById('cnt-scan-status').textContent = 'Aponte para o código de barras da bebida';
+}
+
+function processCntBarcode(code) {
+  code = String(code).trim();
+  if (!code) return;
+  beep();
+
+  // Buscar nos produtos cadastrados no estoque da cozinha primeiro
+  const produtos = getProdutos();
+  let nome = null, codigoFinal = code;
+
+  if (produtos[code]) {
+    nome = produtos[code].nome;
+  } else {
+    // Tentar prefixo 7 dígitos (balança)
+    const pref = code.substring(0,7);
+    if (produtos[pref]) { nome = produtos[pref].nome; codigoFinal = pref; }
+  }
+
+  if (!nome) {
+    // Produto não cadastrado — pedir nome
+    const nomeDigitado = prompt('Produto não cadastrado.\nDigite o nome do produto:');
+    if (!nomeDigitado) return;
+    nome = nomeDigitado.trim();
+  }
+
+  const media = MEDIAS_BEBIDAS[nome.toLowerCase()] || 0;
+  cntItemAtual = { nome, codigo: codigoFinal, media };
+
+  document.getElementById('cnt-modal-nome').textContent  = nome;
+  document.getElementById('cnt-modal-codigo').textContent = 'Código: ' + codigoFinal;
+  document.getElementById('cnt-modal-qtd').value = 1;
+  document.getElementById('cnt-modal-overlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('cnt-modal-qtd').focus(), 200);
+}
+
+function confirmarCntItem() {
+  const qtd = parseInt(document.getElementById('cnt-modal-qtd').value, 10);
+  if (!qtd || qtd < 0) { showToast('Quantidade inválida', 'error'); return; }
+
+  // Somar se já existe na lista
+  const existente = cntItens.find(i => i.codigo === cntItemAtual.codigo);
+  if (existente) {
+    existente.qtd += qtd;
+  } else {
+    cntItens.push({ ...cntItemAtual, qtd });
+  }
+
+  fecharCntModal();
+  renderCntLista();
+  showToast('✅ ' + cntItemAtual.nome + ' adicionado!', 'success');
+}
+
+function fecharCntModal() {
+  document.getElementById('cnt-modal-overlay').style.display = 'none';
+  cntItemAtual = null;
+}
+
+function removerCntItem(idx) {
+  cntItens.splice(idx, 1);
+  renderCntLista();
+}
+
+function renderCntLista() {
+  const div = document.getElementById('cnt-lista-itens');
+  if (!cntItens.length) {
+    div.innerHTML = '<p style="color:#aaa;font-size:0.85rem;text-align:center;">Nenhum item ainda</p>';
+    return;
+  }
+  div.innerHTML = cntItens.map((item, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;">
+      <div>
+        <div style="font-weight:700;font-size:0.9rem;">${item.nome}</div>
+        <div style="font-size:0.78rem;color:#888;">Qtd: <strong>${item.qtd}</strong>${item.media > 0 ? ' | Mínimo: ' + item.media : ''}</div>
+      </div>
+      <button onclick="removerCntItem(${i})" style="background:none;border:none;color:#b71c1c;font-size:1.2rem;cursor:pointer;">🗑</button>
+    </div>
+  `).join('');
+}
 
 async function enviarContagem() {
   const colaborador = document.getElementById('cnt-colaborador').value.trim();
   if (!colaborador) { showToast('Informe o nome do colaborador!', 'error'); return; }
+  if (!cntItens.length) { showToast('Adicione pelo menos um produto!', 'error'); return; }
 
   const tipo = document.getElementById('cnt-tipo').value;
   const agora = new Date();
-  const dd   = String(agora.getDate()).padStart(2,'0');
-  const mm   = String(agora.getMonth()+1).padStart(2,'0');
-  const yyyy = agora.getFullYear();
-  const dataFull = dd + '/' + mm + '/' + yyyy;
-  const hoje     = dd + '-' + mm;
+  const dd = String(agora.getDate()).padStart(2,'0');
+  const mm = String(agora.getMonth()+1).padStart(2,'0');
+  const dataFull = dd + '/' + mm + '/' + agora.getFullYear();
+  const hoje = dd + '-' + mm;
 
-  const itens = [];
-  const precisaComprar = [];
+  // Calcular o que precisa comprar
+  const precisaComprar = cntItens.filter(i => i.media > 0 && i.qtd < i.media)
+    .map(i => ({ ...i, falta: i.media - i.qtd }));
 
-  document.querySelectorAll('.cnt-field').forEach(inp => {
-    const val = inp.value;
-    if (val === '' || val === null) return;
-    const qtd   = parseInt(val, 10);
-    const nome  = inp.dataset.produto;
-    const media = parseInt(inp.dataset.media, 10);
-    itens.push({ nome, qtd, media });
-    if (media > 0 && qtd < media) {
-      precisaComprar.push({ nome, qtd, media, falta: media - qtd });
-    }
-  });
-
-  if (!itens.length) { showToast('Preencha pelo menos um campo!', 'error'); return; }
-
-  // Mostrar relatório de compras
+  // Mostrar relatório
   const relDiv = document.getElementById('cnt-relatorio');
   const relLista = document.getElementById('cnt-relatorio-lista');
   if (precisaComprar.length) {
@@ -983,14 +1096,13 @@ async function enviarContagem() {
         <span style="font-size:0.88rem;color:#b71c1c;font-weight:700;">Tem ${p.qtd} / Falta ${p.falta}</span>
       </div>`
     ).join('');
-    relDiv.style.display = 'block';
   } else {
-    relLista.innerHTML = '<p style="color:#2e7d32;font-weight:700;">✅ Tudo ok! Nenhum item abaixo da média.</p>';
-    relDiv.style.display = 'block';
+    relLista.innerHTML = '<p style="color:#2e7d32;font-weight:700;">✅ Tudo ok! Estoque dentro da média.</p>';
   }
+  relDiv.style.display = 'block';
 
   // Enviar para Sheets
-  const payload = { tipo: 'contagem', colaborador, tipoContagem: tipo, data: hoje, dataFull, itens };
+  const payload = { tipo: 'contagem', colaborador, tipoContagem: tipo, data: hoje, dataFull, itens: cntItens };
   try {
     showToast('📤 Enviando para o Sheets...', '');
     const url = APPS_SCRIPT_CONTAGEM + '?dados=' + encodeURIComponent(JSON.stringify(payload));
@@ -1002,9 +1114,10 @@ async function enviarContagem() {
 }
 
 function limparContagem() {
-  document.querySelectorAll('.cnt-field').forEach(inp => inp.value = '');
+  cntItens = [];
   document.getElementById('cnt-colaborador').value = '';
   document.getElementById('cnt-relatorio').style.display = 'none';
+  renderCntLista();
   showToast('Formulário limpo!', '');
 }
 
