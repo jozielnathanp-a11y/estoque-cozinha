@@ -495,35 +495,39 @@ function processBarcode(code) {
   beep();
   stopScanner();
 
-  // Detectar etiqueta de balança: EAN-13 começa com 2, peso nos dígitos 7-11
+  // Detectar etiqueta de balança: EAN-13 começa com 2 E tem peso nos dígitos 7-11
   const pesoBalanca = extrairPesoBalanca(code);
   if (pesoBalanca !== null) {
-    // Código interno da balança: usar os 6 primeiros dígitos como chave do produto
+    // Usar os primeiros 7 dígitos como chave do produto (família do item)
     const codProduto = code.substring(0, 7);
     const produtos = getProdutos();
     if (produtos[codProduto]) {
       lancarPesoBalanca(codProduto, pesoBalanca);
     } else {
-      // Produto não cadastrado ainda — abrir cadastro com peso pré-preenchido
       abrirCadastroBalanca(codProduto, pesoBalanca);
     }
     return;
   }
 
+  // Código normal → usar código completo como chave
   const produtos = getProdutos();
   if (produtos[code]) abrirMovimentacao(code);
   else abrirCadastro(code);
 }
 
 // Extrai o peso de um código EAN-13 de balança (começa com 2)
-// Formato: 2 PPPPP KKKKK C  onde KKKKK = peso em gramas (ex: 01214 = 1.214 kg)
+// Formato real de balança: 2 + 5 dígitos produto + 5 dígitos peso + 1 check
+// Peso nos dígitos 7-11. Se peso = 00000, é produto normal (não balança).
 function extrairPesoBalanca(code) {
   if (code.length !== 13) return null;
   if (code[0] !== '2') return null;
   // Dígitos 7 a 11 = peso em gramas
   const pesoStr = code.substring(7, 12);
   const pesoG   = parseInt(pesoStr, 10);
+  // Se peso for zero → código começa com 2 mas NÃO é etiqueta de balança
   if (isNaN(pesoG) || pesoG === 0) return null;
+  // Peso suspeito? Balança raramente passa de 30kg
+  if (pesoG > 30000) return null;
   return pesoG / 1000; // retorna em kg
 }
 
