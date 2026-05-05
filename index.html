@@ -312,9 +312,25 @@
         <div style="font-weight:700;font-size:0.97rem;" id="mov-nome"></div>
         <div style="font-size:0.8rem;color:#888;" id="mov-estoque-atual"></div>
       </div>
-      <label>Quantidade *</label>
-      <input type="number" id="mov-qtd" placeholder="Ex: 5 ou 2.5" step="0.01" min="0.01" />
+
+      <!-- Multiplicador -->
+      <div id="mov-multiplicador-row" style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px;margin-bottom:10px;">
+        <label style="font-size:0.82rem;color:#e65100;font-weight:700;margin-bottom:6px;">🔢 Multiplicar quantidade</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="number" id="mov-mult-qtd" placeholder="Qtd por embalagem" min="1" step="1" inputmode="numeric" style="flex:1;font-size:1rem;" oninput="calcularTotal()" />
+          <span style="font-weight:700;font-size:1.2rem;color:#555;">×</span>
+          <input type="number" id="mov-mult-fator" placeholder="Nº de embalagens" min="1" step="1" inputmode="numeric" style="flex:1;font-size:1rem;" oninput="calcularTotal()" />
+          <span style="font-weight:700;font-size:1.2rem;color:#555;">=</span>
+          <span id="mov-mult-total" style="font-weight:700;font-size:1.1rem;color:#b71c1c;min-width:40px;">0</span>
+        </div>
+        <p style="font-size:0.75rem;color:#888;margin:6px 0 0;">Ex: 12 unidades × 2 fardos = 24</p>
+      </div>
+
+      <label>Quantidade total *</label>
+      <input type="number" id="mov-qtd" placeholder="Ex: 24" step="0.01" min="0.01" style="font-size:1.2rem;text-align:center;" />
       <div id="mov-unidade-label" style="font-size:0.76rem;color:#888;margin-top:3px;"></div>
+      <button id="mov-btn-multiplicar" onclick="toggleMultiplicador()" style="background:none;border:1px solid #e65100;color:#e65100;border-radius:6px;padding:5px 10px;font-size:0.78rem;margin-top:6px;cursor:pointer;">🔢 Multiplicar</button>
+
       <div id="destino-field" style="display:none;margin-top:10px;">
         <label>Unidade Destino</label>
         <select id="mov-destino">
@@ -700,6 +716,10 @@ function abrirMovimentacao(code) {
   document.getElementById('mov-unidade-label').textContent = 'Unidade: ' + p.unidade;
   document.getElementById('mov-qtd').value = '';
   document.getElementById('mov-obs').value = '';
+  document.getElementById('mov-multiplicador-row').style.display = 'none';
+  document.getElementById('mov-mult-qtd').value = '';
+  document.getElementById('mov-mult-fator').value = '';
+  document.getElementById('mov-mult-total').textContent = '0';
   setTipo(sessao && sessao.tipo === 'Saída' ? 'saida' : 'entrada');
   document.getElementById('modal-cadastro').style.display     = 'none';
   document.getElementById('modal-movimentacao').style.display = 'block';
@@ -762,6 +782,26 @@ document.getElementById('modal-overlay').addEventListener('click', function(e) {
 function setTipo(tipo) {
   tipoAtual = tipo;
   document.getElementById('destino-field').style.display = tipo === 'saida' ? 'block' : 'none';
+}
+
+function toggleMultiplicador() {
+  const row = document.getElementById('mov-multiplicador-row');
+  const visible = row.style.display !== 'none';
+  row.style.display = visible ? 'none' : 'block';
+  if (!visible) {
+    document.getElementById('mov-mult-qtd').value = '';
+    document.getElementById('mov-mult-fator').value = '';
+    document.getElementById('mov-mult-total').textContent = '0';
+    setTimeout(() => document.getElementById('mov-mult-qtd').focus(), 100);
+  }
+}
+
+function calcularTotal() {
+  const qtd   = parseFloat(document.getElementById('mov-mult-qtd').value) || 0;
+  const fator = parseFloat(document.getElementById('mov-mult-fator').value) || 0;
+  const total = qtd * fator;
+  document.getElementById('mov-mult-total').textContent = total || '0';
+  if (total > 0) document.getElementById('mov-qtd').value = total;
 }
 
 // ── SESSÃO ──
