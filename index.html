@@ -92,41 +92,81 @@
 
 <!-- SCANNER -->
 <div id="tab-scanner" class="screen active">
-  <div class="card" style="margin-top:0;">
-    <h3>📷 Leitura de Código de Barras</h3>
-    <div id="video-container" style="display:none;">
-      <video id="scanner-video" autoplay muted playsinline></video>
-      <div id="scan-overlay">
-        <div id="scan-frame"></div>
-        <div id="scan-line"></div>
+
+  <!-- PASSO 1: Identificação -->
+  <div class="card" style="margin-top:0;" id="card-identificacao">
+    <h3>👤 Quem está fazendo?</h3>
+    <label>Colaborador *</label>
+    <input type="text" id="sess-colaborador" placeholder="Seu nome" />
+    <label>Tipo de movimentação *</label>
+    <select id="sess-tipo">
+      <option value="Entrada">📥 Entrada de produtos</option>
+      <option value="Contagem de estoque">🧮 Contagem de estoque</option>
+      <option value="Saída">📤 Saída</option>
+    </select>
+    <button class="btn btn-red" onclick="iniciarSessao()" style="margin-top:12px;">▶ Iniciar Escaneamento</button>
+  </div>
+
+  <!-- PASSO 2: Scanner (aparece após identificação) -->
+  <div id="card-scanner" style="display:none;">
+    <div class="card" style="margin-top:0;background:#fff3e0;border:2px solid #e65100;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div>
+          <span style="font-weight:700;color:#e65100;" id="sess-label-tipo"></span><br>
+          <span style="font-size:0.82rem;color:#888;" id="sess-label-colab"></span>
+        </div>
+        <button class="btn btn-gray" onclick="encerrarSessao()" style="padding:6px 12px;font-size:0.8rem;">✖ Cancelar</button>
       </div>
     </div>
-    <button class="btn btn-red" id="btn-start" onclick="startScanner()" style="margin-top:0;">▶ Iniciar Câmera</button>
-    <button class="btn btn-gray" id="btn-stop" onclick="stopScanner()" style="display:none;">⏹ Parar Câmera</button>
-    <p id="scan-status" style="font-size:0.76rem;color:#888;margin-top:7px;text-align:center;">Toque em "Iniciar Câmera" para escanear</p>
+
+    <div class="card">
+      <h3>📷 Escanear Produto</h3>
+      <div id="video-container" style="display:none;">
+        <video id="scanner-video" autoplay muted playsinline></video>
+        <div id="scan-overlay">
+          <div id="scan-frame"></div>
+          <div id="scan-line"></div>
+        </div>
+      </div>
+      <button class="btn btn-red" id="btn-start" onclick="startScanner()" style="margin-top:0;">▶ Iniciar Câmera</button>
+      <button class="btn btn-gray" id="btn-stop" onclick="stopScanner()" style="display:none;">⏹ Parar Câmera</button>
+      <p id="scan-status" style="font-size:0.76rem;color:#888;margin-top:7px;text-align:center;">Toque em "Iniciar Câmera" para escanear</p>
+      <div style="margin-top:10px;">
+        <input type="number" id="manual-code" placeholder="Ou digite o código manualmente" inputmode="numeric" />
+        <button class="btn btn-blue" onclick="processBarcode(document.getElementById('manual-code').value)" style="margin-top:8px;">🔍 Buscar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>⚖️ Ler Peso da Etiqueta</h3>
+      <p style="font-size:0.8rem;color:#555;margin-bottom:8px;">Aponte para o número do peso na etiqueta da balança</p>
+      <div id="ocr-container" style="display:none;">
+        <video id="ocr-video" autoplay muted playsinline></video>
+        <div id="ocr-frame"><div id="ocr-box"></div></div>
+      </div>
+      <div id="ocr-result-display"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;" id="ocr-produto-row" style="display:none;">
+        <select id="ocr-produto-select" style="flex:1;"></select>
+      </div>
+      <button class="btn btn-green" id="btn-ocr-start" onclick="startOCR()" style="margin-top:8px;">⚖️ Ler Peso</button>
+      <button class="btn btn-gray" id="btn-ocr-stop" onclick="stopOCR()" style="display:none;">⏹ Parar</button>
+      <button class="btn btn-blue" id="btn-ocr-confirm" onclick="confirmarPesoOCR()" style="display:none;">✅ Confirmar Peso</button>
+    </div>
+
+    <!-- Itens da sessão -->
+    <div class="card">
+      <h3>📋 Itens desta sessão</h3>
+      <div id="sess-lista" style="min-height:36px;">
+        <p style="color:#aaa;font-size:0.85rem;text-align:center;">Nenhum item ainda</p>
+      </div>
+    </div>
+
+    <!-- Botão finalizar -->
+    <div style="padding:0 14px 28px;">
+      <button class="btn btn-green" onclick="finalizarSessao()" style="font-size:1rem;padding:14px;">✅ Finalizar e Enviar</button>
+    </div>
   </div>
 
-  <div class="card">
-    <h3>⚖️ Ler Peso da Etiqueta</h3>
-    <p style="font-size:0.8rem;color:#555;margin-bottom:8px;">Aponte para o número do peso na etiqueta da balança</p>
-    <div id="ocr-container" style="display:none;">
-      <video id="ocr-video" autoplay muted playsinline></video>
-      <div id="ocr-frame"><div id="ocr-box"></div></div>
-    </div>
-    <div id="ocr-result-display"></div>
-    <div style="display:flex;gap:8px;margin-top:8px;" id="ocr-produto-row" style="display:none;">
-      <select id="ocr-produto-select" style="flex:1;"></select>
-    </div>
-    <button class="btn btn-green" id="btn-ocr-start" onclick="startOCR()" style="margin-top:8px;">⚖️ Ler Peso</button>
-    <button class="btn btn-gray" id="btn-ocr-stop" onclick="stopOCR()" style="display:none;">⏹ Parar</button>
-    <button class="btn btn-blue" id="btn-ocr-confirm" onclick="confirmarPesoOCR()" style="display:none;">✅ Confirmar Peso</button>
-  </div>
-
-  <div class="card">
-    <h3>⌨️ Digitar Código Manualmente</h3>
-    <input type="number" id="manual-code" placeholder="Ex: 7891234567890" inputmode="numeric" />
-    <button class="btn btn-blue" onclick="processBarcode(document.getElementById('manual-code').value)" style="margin-top:8px;">🔍 Buscar Produto</button>
-  </div>
 </div>
 
 <!-- ESTOQUE -->
@@ -272,14 +312,9 @@
         <div style="font-weight:700;font-size:0.97rem;" id="mov-nome"></div>
         <div style="font-size:0.8rem;color:#888;" id="mov-estoque-atual"></div>
       </div>
-      <label>Colaborador *</label>
-      <input type="text" id="mov-colaborador" placeholder="Seu nome" />
-      <label>Tipo *</label>
-      <select id="mov-tipo-contagem">
-        <option value="Entrada">📥 Entrada</option>
-        <option value="Contagem de estoque">🧮 Contagem de estoque</option>
-        <option value="Saída">📤 Saída</option>
-      </select>
+      <label>Quantidade *</label>
+      <input type="number" id="mov-qtd" placeholder="Ex: 5 ou 2.5" step="0.01" min="0.01" />
+      <div id="mov-unidade-label" style="font-size:0.76rem;color:#888;margin-top:3px;"></div>
       <div id="destino-field" style="display:none;margin-top:10px;">
         <label>Unidade Destino</label>
         <select id="mov-destino">
@@ -289,9 +324,6 @@
           <option value="Outra unidade">Outra unidade</option>
         </select>
       </div>
-      <label>Quantidade *</label>
-      <input type="number" id="mov-qtd" placeholder="Ex: 5 ou 2.5" step="0.01" min="0.01" />
-      <div id="mov-unidade-label" style="font-size:0.76rem;color:#888;margin-top:3px;"></div>
       <label>Observação (opcional)</label>
       <input type="text" id="mov-obs" placeholder="Ex: NF 12345, Fornecedor..." />
       <button class="btn btn-green" onclick="registrarMovimentacao()" style="margin-top:14px;">✅ Confirmar</button>
@@ -668,11 +700,7 @@ function abrirMovimentacao(code) {
   document.getElementById('mov-unidade-label').textContent = 'Unidade: ' + p.unidade;
   document.getElementById('mov-qtd').value = '';
   document.getElementById('mov-obs').value = '';
-  document.getElementById('mov-tipo-contagem').value = 'Entrada';
-  // Manter nome do colaborador do último lançamento
-  const ultimoColab = localStorage.getItem('ultimoColaborador') || '';
-  document.getElementById('mov-colaborador').value = ultimoColab;
-  setTipo('entrada');
+  setTipo(sessao && sessao.tipo === 'Saída' ? 'saida' : 'entrada');
   document.getElementById('modal-cadastro').style.display     = 'none';
   document.getElementById('modal-movimentacao').style.display = 'block';
   document.getElementById('modal-edicao').style.display       = 'none';
@@ -736,14 +764,108 @@ function setTipo(tipo) {
   document.getElementById('destino-field').style.display = tipo === 'saida' ? 'block' : 'none';
 }
 
-// Sincronizar select de tipo com tipoAtual
+// ── SESSÃO ──
+let sessao = null;
+
+function iniciarSessao() {
+  const colaborador = document.getElementById('sess-colaborador').value.trim();
+  if (!colaborador) { showToast('Informe seu nome!', 'error'); return; }
+  const tipo = document.getElementById('sess-tipo').value;
+  sessao = { colaborador, tipo, itens: [] };
+  localStorage.setItem('ultimoColaborador', colaborador);
+  document.getElementById('sess-label-tipo').textContent = tipo;
+  document.getElementById('sess-label-colab').textContent = '👤 ' + colaborador;
+  document.getElementById('card-identificacao').style.display = 'none';
+  document.getElementById('card-scanner').style.display = 'block';
+  renderSessLista();
+}
+
+function encerrarSessao() {
+  if (sessao && sessao.itens.length > 0) {
+    if (!confirm('Descartar os ' + sessao.itens.length + ' itens desta sessão?')) return;
+  }
+  sessao = null;
+  stopScanner();
+  document.getElementById('card-scanner').style.display = 'none';
+  document.getElementById('card-identificacao').style.display = 'block';
+  document.getElementById('sess-colaborador').value = localStorage.getItem('ultimoColaborador') || '';
+}
+
+function renderSessLista() {
+  const div = document.getElementById('sess-lista');
+  if (!sessao || !sessao.itens.length) {
+    div.innerHTML = '<p style="color:#aaa;font-size:0.85rem;text-align:center;">Nenhum item ainda</p>';
+    return;
+  }
+  div.innerHTML = sessao.itens.map((item, i) =>
+    `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0f0;">
+      <div>
+        <div style="font-weight:700;font-size:0.9rem;">${item.nome}</div>
+        <div style="font-size:0.78rem;color:#888;">${fmtQ(item.qtd, item.unidade)}</div>
+      </div>
+      <button onclick="removeSessItem(${i})" style="background:none;border:none;color:#b71c1c;font-size:1.2rem;cursor:pointer;">🗑</button>
+    </div>`
+  ).join('');
+}
+
+function removeSessItem(idx) {
+  if (!sessao) return;
+  const item = sessao.itens[idx];
+  const produtos = getProdutos();
+  if (produtos[item.codigo]) {
+    if (sessao.tipo === 'Saída') produtos[item.codigo].estoque += item.qtd;
+    else produtos[item.codigo].estoque -= item.qtd;
+    saveProdutos(produtos);
+  }
+  sessao.itens.splice(idx, 1);
+  renderSessLista();
+  renderEstoque();
+}
+
+async function finalizarSessao() {
+  if (!sessao || !sessao.itens.length) { showToast('Nenhum item para finalizar!', 'error'); return; }
+  const agora = new Date();
+  const dd = String(agora.getDate()).padStart(2,'0');
+  const mm = String(agora.getMonth()+1).padStart(2,'0');
+  const dataFull = dd + '/' + mm + '/' + agora.getFullYear();
+  const hoje = dd + '-' + mm;
+  const payload = {
+    tipo: 'contagem', colaborador: sessao.colaborador, tipoContagem: sessao.tipo,
+    data: hoje, dataFull,
+    itens: sessao.itens.map(i => ({ nome: i.nome, qtd: i.qtd, media: MEDIAS_BEBIDAS[i.nome.toLowerCase()] || 0 }))
+  };
+  try {
+    showToast('📤 Enviando...', '');
+    await fetch(APPS_SCRIPT_CONTAGEM + '?dados=' + encodeURIComponent(JSON.stringify(payload)), { method: 'GET', mode: 'no-cors' });
+    showToast('✅ Enviado!', 'success');
+  } catch(e) {
+    showToast('⚠️ Estoque local atualizado', 'error');
+  }
+  if (sessao.tipo !== 'Saída') {
+    const precisaComprar = sessao.itens.filter(i => {
+      const m = MEDIAS_BEBIDAS[i.nome.toLowerCase()] || 0;
+      return m > 0 && i.qtd < m;
+    });
+    if (precisaComprar.length) {
+      alert('🛒 PRECISA COMPRAR:\n\n' + precisaComprar.map(p => {
+        const m = MEDIAS_BEBIDAS[p.nome.toLowerCase()];
+        return '⚠️ ' + p.nome + ': tem ' + p.qtd + ', falta ' + (m - p.qtd);
+      }).join('\n'));
+    }
+  }
+  sessao = null;
+  stopScanner();
+  document.getElementById('card-scanner').style.display = 'none';
+  document.getElementById('card-identificacao').style.display = 'block';
+  document.getElementById('sess-colaborador').value = localStorage.getItem('ultimoColaborador') || '';
+  renderEstoque();
+}
+
+// ── SINCRONIZAR select destino com tipo da sessão ──
 document.addEventListener('DOMContentLoaded', function() {
-  const sel = document.getElementById('mov-tipo-contagem');
-  if (sel) sel.addEventListener('change', function() {
-    const v = this.value;
-    if (v === 'Saída') setTipo('saida');
-    else setTipo('entrada');
-  });
+  const ultimoColab = localStorage.getItem('ultimoColaborador') || '';
+  const el = document.getElementById('sess-colaborador');
+  if (el) el.value = ultimoColab;
 });
 
 // ── CADASTRAR ──
@@ -763,24 +885,26 @@ function cadastrarProduto() {
 
 // ── MOVIMENTAÇÃO ──
 function registrarMovimentacao() {
-  const colaborador = document.getElementById('mov-colaborador').value.trim();
-  if (!colaborador) { showToast('Informe o colaborador!', 'error'); return; }
-  const tipoContagem = document.getElementById('mov-tipo-contagem').value;
-  const tipo    = tipoContagem === 'Saída' ? 'saida' : 'entrada';
+  if (!sessao) { showToast('Inicie uma sessão primeiro!', 'error'); fecharModal(); return; }
   const qtd     = parseFloat(document.getElementById('mov-qtd').value);
   const obs     = document.getElementById('mov-obs').value.trim();
-  const destino = document.getElementById('mov-destino').value;
+  const destino = document.getElementById('mov-destino') ? document.getElementById('mov-destino').value : '';
   if (!qtd || qtd <= 0) { showToast('Informe a quantidade!', 'error'); return; }
+  const tipo = sessao.tipo === 'Saída' ? 'saida' : 'entrada';
   const produtos = getProdutos();
   const p = produtos[currentCode];
   if (tipo === 'saida' && qtd > p.estoque) { showToast('Quantidade maior que o estoque!', 'error'); return; }
   if (tipo === 'entrada') p.estoque += qtd; else p.estoque -= qtd;
   saveProdutos(produtos);
-  const obsTexto = [tipoContagem, colaborador, tipo === 'saida' ? 'Para: ' + destino : '', obs].filter(Boolean).join(' | ');
+  const obsTexto = [sessao.tipo, sessao.colaborador, tipo === 'saida' && destino ? 'Para: ' + destino : '', obs].filter(Boolean).join(' | ');
   addHistorico(currentCode, p.nome, tipo, qtd, p.unidade, obsTexto, destino);
-  localStorage.setItem('ultimoColaborador', colaborador);
+  // Adicionar à lista da sessão (somar se já existe)
+  const existente = sessao.itens.find(i => i.codigo === currentCode);
+  if (existente) existente.qtd += qtd;
+  else sessao.itens.push({ codigo: currentCode, nome: p.nome, qtd, unidade: p.unidade });
+  renderSessLista();
   fecharModal();
-  showToast('✅ ' + tipoContagem + ' de ' + fmtQ(qtd, p.unidade) + ' por ' + colaborador + '!', 'success');
+  showToast('✅ ' + p.nome + ' — ' + fmtQ(qtd, p.unidade), 'success');
 }
 
 // ── HISTÓRICO ──
