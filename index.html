@@ -86,7 +86,6 @@
 <div class="tabs">
   <div class="tab active" onclick="showTab('scanner',this)">📷 Escanear</div>
   <div class="tab" onclick="showTab('estoque',this)">📦 Estoque</div>
-  <div class="tab" onclick="showTab('contagem',this)">🧮 Contagem</div>
   <div class="tab" onclick="showTab('historico',this)">📋 Histórico</div>
   <div class="tab" onclick="showTab('exportar',this)">💾 Exportar</div>
 </div>
@@ -273,10 +272,14 @@
         <div style="font-weight:700;font-size:0.97rem;" id="mov-nome"></div>
         <div style="font-size:0.8rem;color:#888;" id="mov-estoque-atual"></div>
       </div>
-      <div class="toggle-row">
-        <div class="toggle-btn sel-entrada" id="toggle-entrada" onclick="setTipo('entrada')">📥 Entrada</div>
-        <div class="toggle-btn" id="toggle-saida" onclick="setTipo('saida')">📤 Saída</div>
-      </div>
+      <label>Colaborador *</label>
+      <input type="text" id="mov-colaborador" placeholder="Seu nome" />
+      <label>Tipo *</label>
+      <select id="mov-tipo-contagem">
+        <option value="Entrada">📥 Entrada</option>
+        <option value="Contagem de estoque">🧮 Contagem de estoque</option>
+        <option value="Saída">📤 Saída</option>
+      </select>
       <div id="destino-field" style="display:none;margin-top:10px;">
         <label>Unidade Destino</label>
         <select id="mov-destino">
@@ -665,6 +668,10 @@ function abrirMovimentacao(code) {
   document.getElementById('mov-unidade-label').textContent = 'Unidade: ' + p.unidade;
   document.getElementById('mov-qtd').value = '';
   document.getElementById('mov-obs').value = '';
+  document.getElementById('mov-tipo-contagem').value = 'Entrada';
+  // Manter nome do colaborador do último lançamento
+  const ultimoColab = localStorage.getItem('ultimoColaborador') || '';
+  document.getElementById('mov-colaborador').value = ultimoColab;
   setTipo('entrada');
   document.getElementById('modal-cadastro').style.display     = 'none';
   document.getElementById('modal-movimentacao').style.display = 'block';
@@ -726,10 +733,18 @@ document.getElementById('modal-overlay').addEventListener('click', function(e) {
 
 function setTipo(tipo) {
   tipoAtual = tipo;
-  document.getElementById('toggle-entrada').className = 'toggle-btn' + (tipo === 'entrada' ? ' sel-entrada' : '');
-  document.getElementById('toggle-saida').className   = 'toggle-btn' + (tipo === 'saida'   ? ' sel-saida'   : '');
   document.getElementById('destino-field').style.display = tipo === 'saida' ? 'block' : 'none';
 }
+
+// Sincronizar select de tipo com tipoAtual
+document.addEventListener('DOMContentLoaded', function() {
+  const sel = document.getElementById('mov-tipo-contagem');
+  if (sel) sel.addEventListener('change', function() {
+    const v = this.value;
+    if (v === 'Saída') setTipo('saida');
+    else setTipo('entrada');
+  });
+});
 
 // ── CADASTRAR ──
 function cadastrarProduto() {
@@ -748,7 +763,10 @@ function cadastrarProduto() {
 
 // ── MOVIMENTAÇÃO ──
 function registrarMovimentacao() {
-  const tipo    = tipoAtual;
+  const colaborador = document.getElementById('mov-colaborador').value.trim();
+  if (!colaborador) { showToast('Informe o colaborador!', 'error'); return; }
+  const tipoContagem = document.getElementById('mov-tipo-contagem').value;
+  const tipo    = tipoContagem === 'Saída' ? 'saida' : 'entrada';
   const qtd     = parseFloat(document.getElementById('mov-qtd').value);
   const obs     = document.getElementById('mov-obs').value.trim();
   const destino = document.getElementById('mov-destino').value;
@@ -758,10 +776,11 @@ function registrarMovimentacao() {
   if (tipo === 'saida' && qtd > p.estoque) { showToast('Quantidade maior que o estoque!', 'error'); return; }
   if (tipo === 'entrada') p.estoque += qtd; else p.estoque -= qtd;
   saveProdutos(produtos);
-  const obsTexto = tipo === 'saida' ? 'Para: ' + destino + (obs ? ' | ' + obs : '') : obs;
+  const obsTexto = [tipoContagem, colaborador, tipo === 'saida' ? 'Para: ' + destino : '', obs].filter(Boolean).join(' | ');
   addHistorico(currentCode, p.nome, tipo, qtd, p.unidade, obsTexto, destino);
+  localStorage.setItem('ultimoColaborador', colaborador);
   fecharModal();
-  showToast('✅ ' + (tipo === 'entrada' ? 'Entrada' : 'Saída') + ' de ' + fmtQ(qtd, p.unidade) + '!', 'success');
+  showToast('✅ ' + tipoContagem + ' de ' + fmtQ(qtd, p.unidade) + ' por ' + colaborador + '!', 'success');
 }
 
 // ── HISTÓRICO ──
