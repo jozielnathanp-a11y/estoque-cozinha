@@ -717,8 +717,8 @@ function abrirMovimentacao(code) {
   const preTotal = typeof getPreMultTotal === 'function' ? getPreMultTotal() : null;
 
   // Categorias que sempre pedem quantidade (com multiplicador)
-  const categoriasComModal = ['Bebidas','Alimentos','Embalagens'];
-  const precisaModal = categoriasComModal.includes(p.categoria) || p.unidade === 'kg' || p.unidade === 'g';
+  const categoriasComModal = ['Bebidas','Alimentos'];
+  const precisaModal = (categoriasComModal.includes(p.categoria) || p.unidade === 'kg' || p.unidade === 'g') && !['cx','CX'].includes(p.unidade);
 
   // Se não precisa modal e não tem pré-multiplicador → lança +1 direto
   if (!precisaModal && !preTotal) {
