@@ -697,19 +697,7 @@ function abrirMovimentacao(code) {
   currentCode = code;
   const p = getProdutos()[code];
 
-  // PCT, UN, CX, L → lança +1 direto sem modal
-  const unidadesRapidas = ['pct','un','cx','L','PCT','UN','CX'];
-  if (unidadesRapidas.includes(p.unidade)) {
-    const produtos = getProdutos();
-    produtos[code].estoque += 1;
-    saveProdutos(produtos);
-    addHistorico(code, p.nome, 'entrada', 1, p.unidade, 'Lançamento rápido', '');
-    showToast('✅ +1 ' + p.unidade + ' — ' + p.nome, 'success');
-    renderEstoque();
-    return;
-  }
-
-  // kg, g → abre modal pra digitar quantidade
+  // Sempre abre o modal — nunca lança direto sem perguntar
   document.getElementById('modal-title').textContent    = '📦 Movimentação';
   document.getElementById('modal-subtitle').textContent = p.nome;
   document.getElementById('mov-nome').textContent          = p.nome;
