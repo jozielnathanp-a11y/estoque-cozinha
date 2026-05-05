@@ -606,6 +606,16 @@ function fecharModal() {
   currentCode = '';
 }
 
+function excluirProduto(code) {
+  const p = getProdutos()[code];
+  if (!confirm('Excluir "' + p.nome + '"?\nEssa ação não pode ser desfeita.')) return;
+  const produtos = getProdutos();
+  delete produtos[code];
+  saveProdutos(produtos);
+  renderEstoque();
+  showToast('🗑️ Produto excluído', '');
+}
+
 function editarEstoque(code) {
   currentCode = code;
   const p = getProdutos()[code];
@@ -734,6 +744,7 @@ function renderEstoque() {
             ${qtdStr}<small>${p.unidade}</small>
           </div>
           <button onclick="editarEstoque('${p.codigo}')" style="background:#f5f5f5;border:1.5px solid #ddd;border-radius:8px;padding:6px 9px;cursor:pointer;font-size:0.85rem;" title="Editar estoque">✏️</button>
+          <button onclick="excluirProduto('${p.codigo}')" style="background:#fff0f0;border:1.5px solid #ffcdd2;border-radius:8px;padding:6px 9px;cursor:pointer;font-size:0.85rem;" title="Excluir produto">🗑️</button>
         </div>
       </div>`;
     });
