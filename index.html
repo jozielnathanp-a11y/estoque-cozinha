@@ -285,8 +285,8 @@
   </div>
   <div class="card">
     <h3>🗑️ Limpar Dados</h3>
-    <p style="font-size:0.82rem;color:#c62828;margin-bottom:8px;">Apaga todos os produtos e movimentações.</p>
-    <button class="btn btn-gray" onclick="limparDados()">Limpar tudo</button>
+    <p style="font-size:0.82rem;color:#c62828;margin-bottom:8px;">Apaga todos os produtos e movimentações. Requer senha.</p>
+    <button class="btn btn-gray" onclick="limparDados()">🔒 Limpar tudo</button>
   </div>
 </div>
 
@@ -1092,7 +1092,13 @@ function exportCSV(tipo) {
 }
 
 function limparDados() {
-  if (!confirm('Tem certeza? Isso apaga TUDO!')) return;
+  const senha = prompt('🔒 Digite a senha para limpar os dados:');
+  if (senha === null) return;
+  if (senha !== 'prensadao123') {
+    showToast('❌ Senha incorreta!', 'error');
+    return;
+  }
+  if (!confirm('⚠️ Tem certeza? Isso apaga TODOS os produtos e histórico!')) return;
   localStorage.removeItem(KEY_PROD);
   localStorage.removeItem(KEY_HIST);
   renderEstoque(); renderHistorico();
