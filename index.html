@@ -716,7 +716,31 @@ function abrirMovimentacao(code) {
   // Verificar se tem multiplicador pré-definido
   const preTotal = typeof getPreMultTotal === 'function' ? getPreMultTotal() : null;
 
-  // Sempre abre o modal — nunca lança direto sem perguntar
+  // Categorias que sempre pedem quantidade (com multiplicador)
+  const categoriasComModal = ['Bebidas','Alimentos','Embalagens'];
+  const precisaModal = categoriasComModal.includes(p.categoria) || p.unidade === 'kg' || p.unidade === 'g';
+
+  // Se não precisa modal e não tem pré-multiplicador → lança +1 direto
+  if (!precisaModal && !preTotal) {
+    const produtos = getProdutos();
+    const tipo = sessao && sessao.tipo === 'Saída' ? 'saida' : 'entrada';
+    if (tipo === 'entrada') produtos[code].estoque += 1;
+    else if (produtos[code].estoque >= 1) produtos[code].estoque -= 1;
+    else { showToast('Estoque zerado!', 'error'); return; }
+    saveProdutos(produtos);
+    addHistorico(code, p.nome, tipo, 1, p.unidade, sessao ? sessao.tipo + ' | ' + sessao.colaborador : 'Lançamento rápido', '');
+    if (sessao) {
+      const existente = sessao.itens.find(i => i.codigo === code);
+      if (existente) existente.qtd += 1;
+      else sessao.itens.push({ codigo: code, nome: p.nome, qtd: 1, unidade: p.unidade });
+      renderSessLista();
+    }
+    showToast('✅ +1 ' + p.unidade + ' — ' + p.nome, 'success');
+    renderEstoque();
+    return;
+  }
+
+  // Abre modal com quantidade
   document.getElementById('modal-title').textContent    = '📦 Movimentação';
   document.getElementById('modal-subtitle').textContent = p.nome;
   document.getElementById('mov-nome').textContent          = p.nome;
