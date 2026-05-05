@@ -813,7 +813,11 @@ function limparDados() {
 }
 
 // ── UTILS ──
-const fmtQ = (qtd, un) => (qtd % 1 === 0 ? qtd : parseFloat(qtd).toFixed(2)) + ' ' + un;
+const fmtQ = (qtd, un) => {
+  const unInt = ['pct','PCT','un','UN','cx','CX','L'];
+  if (unInt.includes(un)) return Math.round(qtd) + ' ' + un;
+  return (parseFloat(qtd) % 1 === 0 ? parseFloat(qtd) : parseFloat(qtd).toFixed(3)) + ' ' + un;
+};
 const fmtD = iso => { const d = new Date(iso); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}); };
 const dataHoje = () => new Date().toISOString().split('T')[0];
 
