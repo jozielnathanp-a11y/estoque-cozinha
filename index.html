@@ -569,7 +569,19 @@ function abrirMovimentacao(code) {
   currentCode = code;
   const p = getProdutos()[code];
 
-  // Sempre abre modal para confirmar quantidade
+  // PCT, UN, CX, L → lança +1 direto sem modal
+  const unidadesRapidas = ['pct','un','cx','L','PCT','UN','CX'];
+  if (unidadesRapidas.includes(p.unidade)) {
+    const produtos = getProdutos();
+    produtos[code].estoque += 1;
+    saveProdutos(produtos);
+    addHistorico(code, p.nome, 'entrada', 1, p.unidade, 'Lançamento rápido', '');
+    showToast('✅ +1 ' + p.unidade + ' — ' + p.nome, 'success');
+    renderEstoque();
+    return;
+  }
+
+  // kg, g → abre modal pra digitar quantidade
   document.getElementById('modal-title').textContent    = '📦 Movimentação';
   document.getElementById('modal-subtitle').textContent = p.nome;
   document.getElementById('mov-nome').textContent          = p.nome;
@@ -580,6 +592,7 @@ function abrirMovimentacao(code) {
   setTipo('entrada');
   document.getElementById('modal-cadastro').style.display     = 'none';
   document.getElementById('modal-movimentacao').style.display = 'block';
+  document.getElementById('modal-edicao').style.display       = 'none';
   document.getElementById('modal-overlay').classList.add('open');
   setTimeout(() => document.getElementById('mov-qtd').focus(), 300);
 }
