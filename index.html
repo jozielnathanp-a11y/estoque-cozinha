@@ -315,17 +315,16 @@
         <div style="font-size:0.8rem;color:#888;" id="mov-estoque-atual"></div>
       </div>
 
-      <!-- Multiplicador -->
       <div id="mov-multiplicador-row" style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px;margin-bottom:10px;">
         <label style="font-size:0.82rem;color:#e65100;font-weight:700;margin-bottom:6px;">🔢 Multiplicar quantidade</label>
         <div style="display:flex;align-items:center;gap:8px;">
-          <input type="number" id="mov-mult-qtd" placeholder="Qtd por embalagem" min="1" step="1" inputmode="numeric" style="flex:1;font-size:1rem;" oninput="calcularTotal()" />
+          <input type="number" id="mov-mult-qtd" placeholder="Qtd/embalagem" min="1" step="1" inputmode="numeric" style="flex:1;font-size:1rem;" oninput="calcularTotal()" />
           <span style="font-weight:700;font-size:1.2rem;color:#555;">×</span>
-          <input type="number" id="mov-mult-fator" placeholder="Nº de embalagens" min="1" step="1" inputmode="numeric" style="flex:1;font-size:1rem;" oninput="calcularTotal()" />
+          <input type="number" id="mov-mult-fator" placeholder="Nº embalagens" min="1" step="1" inputmode="numeric" style="flex:1;font-size:1rem;" oninput="calcularTotal()" />
           <span style="font-weight:700;font-size:1.2rem;color:#555;">=</span>
-          <span id="mov-mult-total" style="font-weight:700;font-size:1.1rem;color:#b71c1c;min-width:40px;">0</span>
+          <span id="mov-mult-total" style="font-weight:700;font-size:1.2rem;color:#b71c1c;min-width:40px;text-align:right;">0</span>
         </div>
-        <p style="font-size:0.75rem;color:#888;margin:6px 0 0;">Ex: 12 unidades × 2 fardos = 24</p>
+        <p style="font-size:0.75rem;color:#888;margin:6px 0 0;">Ex: 12 un × 2 fardos = 24 | 3 pães × 5 pcts = 15</p>
       </div>
 
       <label>Quantidade total *</label>
@@ -718,16 +717,20 @@ function abrirMovimentacao(code) {
   document.getElementById('mov-unidade-label').textContent = 'Unidade: ' + p.unidade;
   document.getElementById('mov-qtd').value = '';
   document.getElementById('mov-obs').value = '';
-  document.getElementById('mov-multiplicador-row').style.display = 'none';
   document.getElementById('mov-mult-qtd').value = '';
   document.getElementById('mov-mult-fator').value = '';
   document.getElementById('mov-mult-total').textContent = '0';
+
+  // Mostrar multiplicador automaticamente para Bebidas e Pão (unidade = un/pct)
+  const mostrarMult = ['un','UN','pct','PCT'].includes(p.unidade);
+  document.getElementById('mov-multiplicador-row').style.display = mostrarMult ? 'block' : 'none';
+
   setTipo(sessao && sessao.tipo === 'Saída' ? 'saida' : 'entrada');
   document.getElementById('modal-cadastro').style.display     = 'none';
   document.getElementById('modal-movimentacao').style.display = 'block';
   document.getElementById('modal-edicao').style.display       = 'none';
   document.getElementById('modal-overlay').classList.add('open');
-  setTimeout(() => document.getElementById('mov-qtd').focus(), 300);
+  setTimeout(() => document.getElementById(mostrarMult ? 'mov-mult-qtd' : 'mov-qtd').focus(), 300);
 }
 
 function fecharModal() {
