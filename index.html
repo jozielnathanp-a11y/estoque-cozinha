@@ -495,12 +495,18 @@ function processBarcode(code) {
   beep();
   stopScanner();
 
+  // Se o código já está cadastrado → usa direto, independente do formato
+  const produtos = getProdutos();
+  if (produtos[code]) {
+    abrirMovimentacao(code);
+    return;
+  }
+
   // Detectar etiqueta de balança: EAN-13 começa com 2 E tem peso nos dígitos 7-11
+  // Só aplica para produtos NOVOS (não cadastrados ainda)
   const pesoBalanca = extrairPesoBalanca(code);
   if (pesoBalanca !== null) {
-    // Usar os primeiros 7 dígitos como chave do produto (família do item)
     const codProduto = code.substring(0, 7);
-    const produtos = getProdutos();
     if (produtos[codProduto]) {
       lancarPesoBalanca(codProduto, pesoBalanca);
     } else {
@@ -509,10 +515,8 @@ function processBarcode(code) {
     return;
   }
 
-  // Código normal → usar código completo como chave
-  const produtos = getProdutos();
-  if (produtos[code]) abrirMovimentacao(code);
-  else abrirCadastro(code);
+  // Produto novo, código normal → cadastrar
+  abrirCadastro(code);
 }
 
 // Extrai o peso de um código EAN-13 de balança (começa com 2)
