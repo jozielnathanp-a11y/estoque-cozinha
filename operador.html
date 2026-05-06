@@ -192,6 +192,14 @@ async function atualizarEstoque(codigo, novoEst, mov) {
   if (produtosCache[codigo]) produtosCache[codigo].estoque = novoEst;
   localStorage.setItem('produtos_sheets', JSON.stringify(produtosCache));
   await sheetWrite({ acao: 'movimentacao', dados: JSON.stringify({ ...mov, novoEstoque: novoEst }) });
+  sincronizarGitHub();
+}
+
+async function sincronizarGitHub() {
+  try {
+    const dados = encodeURIComponent(JSON.stringify(produtosCache));
+    await fetch(API + '?acao=syncGitHub&dados=' + dados, { mode: 'no-cors' });
+  } catch(e) { /* falha silenciosa */ }
 }
 
 // ── SESSÃO ──
@@ -352,11 +360,12 @@ function abrirMovimentacao(code) {
 
   if (!precisaModal) {
     const qtd = preTotal || p.qtdPorPct || 1;
+    const isContagem = sessao.tipo === 'Contagem de estoque';
     const tipo = sessao.tipo === 'Saída' ? 'saida' : 'entrada';
     const est = parseFloat(p.estoque) || 0;
     if (tipo === 'saida' && est < qtd) { showToast('Estoque insuficiente!', 'error'); return; }
-    const ne = tipo === 'entrada' ? est + qtd : est - qtd;
-    const mov = { codigo: code, nome: p.nome, tipo, qtd, unidade: p.unidade, colaborador: sessao.colaborador, obs: sessao.tipo };
+    const ne = isContagem ? qtd : (tipo === 'entrada' ? est + qtd : est - qtd);
+    const mov = { codigo: code, nome: p.nome, tipo: isContagem ? 'contagem' : tipo, qtd, unidade: p.unidade, colaborador: sessao.colaborador, obs: isContagem ? 'Contagem' : sessao.tipo };
     atualizarEstoque(code, ne, mov);
     const ex = sessao.itens.find(i => i.codigo === code);
     if (ex) ex.qtd += qtd; else sessao.itens.push({ codigo: code, nome: p.nome, qtd, unidade: p.unidade });
@@ -381,11 +390,12 @@ async function confirmarModal() {
   const qtd = parseFloat(document.getElementById('modal-qtd').value);
   if (!qtd || qtd <= 0) { showToast('Informe a quantidade!', 'error'); return; }
   const p = getProduto(currentCode);
+  const isContagem = sessao.tipo === 'Contagem de estoque';
   const tipo = sessao.tipo === 'Saída' ? 'saida' : 'entrada';
   const est = parseFloat(p.estoque) || 0;
   if (tipo === 'saida' && qtd > est) { showToast('Quantidade maior que o estoque!', 'error'); return; }
-  const ne = tipo === 'entrada' ? est + qtd : est - qtd;
-  const mov = { codigo: currentCode, nome: p.nome, tipo, qtd, unidade: p.unidade, colaborador: sessao.colaborador, obs: sessao.tipo };
+  const ne = isContagem ? qtd : (tipo === 'entrada' ? est + qtd : est - qtd);
+  const mov = { codigo: currentCode, nome: p.nome, tipo: isContagem ? 'contagem' : tipo, qtd, unidade: p.unidade, colaborador: sessao.colaborador, obs: isContagem ? 'Contagem' : sessao.tipo };
   await atualizarEstoque(currentCode, ne, mov);
   const ex = sessao.itens.find(i => i.codigo === currentCode);
   if (ex) ex.qtd += qtd; else sessao.itens.push({ codigo: currentCode, nome: p.nome, qtd, unidade: p.unidade });
