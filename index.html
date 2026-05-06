@@ -381,38 +381,41 @@ async function sheetWrite(params) {
   try { await fetch(url, { mode: 'no-cors' }); return true; } catch(e) { return false; }
 }
 
-// ── CARREGAR PRODUTOS DO SHEETS ──
+// ── CARREGAR PRODUTOS DO GITHUB JSON ──
+const PRODUTOS_URL = 'https://raw.githubusercontent.com/jozielnathanp-a11y/estoque-cozinha/main/produtos.json';
+
 async function carregarProdutos(forcar = false) {
   setSyncStatus('⏳ Sincronizando...');
   const cached = localStorage.getItem('produtos_sheets');
   const ts     = parseInt(localStorage.getItem('produtos_sheets_ts') || '0');
   const agora  = Date.now();
 
-  // Usar cache por até 5 minutos (exceto se forcar)
-  if (!forcar && cached && (agora - ts) < 5 * 60 * 1000) {
+  // Usar cache por até 2 minutos (exceto se forcar)
+  if (!forcar && cached && (agora - ts) < 2 * 60 * 1000) {
     produtosCache = JSON.parse(cached);
     setSyncStatus('✅ ' + Object.keys(produtosCache).length + ' produtos');
     renderEstoque();
     return;
   }
 
-  // Tentar buscar do Sheets via JSONP
-  const data = await sheetRead('getProdutos');
-  if (data && typeof data === 'object') {
-    produtosCache = data;
-    localStorage.setItem('produtos_sheets', JSON.stringify(data));
-    localStorage.setItem('produtos_sheets_ts', String(Date.now()));
-    setSyncStatus('✅ ' + Object.keys(produtosCache).length + ' produtos');
-    showToast('✅ ' + Object.keys(produtosCache).length + ' produtos carregados!', 'success');
-  } else {
-    // Fallback: usar cache mesmo que velho
+  try {
+    const resp = await fetch(PRODUTOS_URL + '?t=' + Date.now());
+    if (resp.ok) {
+      const data = await resp.json();
+      produtosCache = data;
+      localStorage.setItem('produtos_sheets', JSON.stringify(data));
+      localStorage.setItem('produtos_sheets_ts', String(Date.now()));
+      setSyncStatus('✅ ' + Object.keys(produtosCache).length + ' produtos');
+      if (forcar) showToast('✅ ' + Object.keys(produtosCache).length + ' produtos carregados!', 'success');
+    } else { throw new Error('HTTP ' + resp.status); }
+  } catch(e) {
     if (cached) {
       produtosCache = JSON.parse(cached);
       setSyncStatus('⚠️ Offline — cache');
-      showToast('⚠️ Sem conexão — usando cache', 'error');
+      if (forcar) showToast('⚠️ Sem conexão — usando cache', 'error');
     } else {
       setSyncStatus('❌ Sem dados');
-      showToast('❌ Sem conexão com Sheets', 'error');
+      showToast('❌ Sem conexão', 'error');
     }
   }
   renderEstoque();
