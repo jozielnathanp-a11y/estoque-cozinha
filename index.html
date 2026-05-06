@@ -437,11 +437,20 @@ async function salvarProdutoSheets(p) {
   await sheetWrite({ acao: 'salvarProduto', dados: JSON.stringify(p) });
 }
 
-// Atualizar estoque no cache local (otimista) e no Sheets
+// Atualizar estoque no cache local (otimista) e no Sheets + GitHub
 async function atualizarEstoqueSheets(codigo, novoEstoque, movimentacao) {
   if (produtosCache[codigo]) produtosCache[codigo].estoque = novoEstoque;
   localStorage.setItem('produtos_sheets', JSON.stringify(produtosCache));
   await sheetWrite({ acao: 'movimentacao', dados: JSON.stringify({ ...movimentacao, novoEstoque }) });
+  sincronizarGitHub();
+}
+
+async function sincronizarGitHub() {
+  // Sincroniza via Apps Script (que tem acesso ao GitHub)
+  try {
+    const dados = encodeURIComponent(JSON.stringify(produtosCache));
+    await fetch(API + '?acao=syncGitHub&dados=' + dados, { mode: 'no-cors' });
+  } catch(e) { /* falha silenciosa */ }
 }
 
 // ── TABS ──
@@ -639,11 +648,13 @@ function abrirMovimentacao(code) {
 
   if (!precisaModal) {
     const qtdLancar = preTotal || p.qtdPorPct || 1;
+    const isContagem = sessao && sessao.tipo === 'Contagem de estoque';
     const tipo = sessao && sessao.tipo === 'Saída' ? 'saida' : 'entrada';
     const estoqueAtual = parseFloat(p.estoque) || 0;
     if (tipo === 'saida' && estoqueAtual < qtdLancar) { showToast('Estoque insuficiente!', 'error'); return; }
-    const novoEstoque = tipo === 'entrada' ? estoqueAtual + qtdLancar : estoqueAtual - qtdLancar;
-    const mov = { codigo: code, nome: p.nome, tipo, qtd: qtdLancar, unidade: p.unidade, colaborador: sessao ? sessao.colaborador : 'Admin', obs: '' };
+    // Contagem substitui; entrada soma; saída subtrai
+    const novoEstoque = isContagem ? qtdLancar : (tipo === 'entrada' ? estoqueAtual + qtdLancar : estoqueAtual - qtdLancar);
+    const mov = { codigo: code, nome: p.nome, tipo: isContagem ? 'contagem' : tipo, qtd: qtdLancar, unidade: p.unidade, colaborador: sessao ? sessao.colaborador : 'Admin', obs: isContagem ? 'Contagem' : '' };
     addHistoricoLocal(mov);
     atualizarEstoqueSheets(code, novoEstoque, mov);
     if (sessao) {
@@ -877,11 +888,13 @@ async function registrarMovimentacao() {
   const obs = document.getElementById('mov-obs').value.trim();
   const destino = document.getElementById('mov-destino') ? document.getElementById('mov-destino').value : '';
   if (!qtd || qtd <= 0) { showToast('Informe a quantidade!', 'error'); return; }
+  const isContagem = sessao.tipo === 'Contagem de estoque';
   const tipo = sessao.tipo === 'Saída' ? 'saida' : 'entrada';
   const p = getProduto(currentCode);
   const estoqueAtual = parseFloat(p.estoque) || 0;
   if (tipo === 'saida' && qtd > estoqueAtual) { showToast('Quantidade maior que o estoque!', 'error'); return; }
-  const novoEstoque = tipo === 'entrada' ? estoqueAtual + qtd : estoqueAtual - qtd;
+  // Contagem substitui; entrada soma; saída subtrai
+  const novoEstoque = isContagem ? qtd : (tipo === 'entrada' ? estoqueAtual + qtd : estoqueAtual - qtd);
   const obsTexto = [sessao.tipo, sessao.colaborador, tipo === 'saida' && destino ? 'Para: ' + destino : '', obs].filter(Boolean).join(' | ');
   const mov = { codigo: currentCode, nome: p.nome, tipo, qtd, unidade: p.unidade, colaborador: sessao.colaborador, obs: obsTexto };
   addHistoricoLocal(mov);
