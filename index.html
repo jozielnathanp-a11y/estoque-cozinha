@@ -713,7 +713,7 @@ function abrirMovimentacao(code) {
     if (tipo === 'saida' && estoqueAtual < qtdLancar) { showToast('Estoque insuficiente!', 'error'); return; }
     // Contagem substitui; entrada soma; saída subtrai
     const novoEstoque = isContagem ? qtdLancar : (tipo === 'entrada' ? estoqueAtual + qtdLancar : estoqueAtual - qtdLancar);
-    const mov = { codigo: code, nome: p.nome, tipo: isContagem ? 'contagem' : tipo, qtd: qtdLancar, unidade: p.unidade, colaborador: sessao ? sessao.colaborador : 'Admin', obs: isContagem ? 'Contagem' : '' };
+    const mov = { codigo: code, nome: p.nome, tipo: isContagem ? 'contagem' : tipo, qtd: qtdLancar, unidade: p.unidade, colaborador: sessao ? sessao.colaborador : 'Admin', obs: isContagem ? 'Contagem' : '', estoqueAnterior: estoqueAtual };
     addHistoricoLocal(mov);
     atualizarEstoqueSheets(code, novoEstoque, mov);
     if (sessao) {
@@ -955,7 +955,7 @@ async function registrarMovimentacao() {
   // Contagem substitui; entrada soma; saída subtrai
   const novoEstoque = isContagem ? qtd : (tipo === 'entrada' ? estoqueAtual + qtd : estoqueAtual - qtd);
   const obsTexto = [sessao.tipo, sessao.colaborador, tipo === 'saida' && destino ? 'Para: ' + destino : '', obs].filter(Boolean).join(' | ');
-  const mov = { codigo: currentCode, nome: p.nome, tipo, qtd, unidade: p.unidade, colaborador: sessao.colaborador, obs: obsTexto };
+  const mov = { codigo: currentCode, nome: p.nome, tipo: isContagem ? 'contagem' : tipo, qtd, unidade: p.unidade, colaborador: sessao.colaborador, obs: isContagem ? 'Contagem' : obsTexto, estoqueAnterior: estoqueAtual };
   addHistoricoLocal(mov);
   await atualizarEstoqueSheets(currentCode, novoEstoque, mov);
   const ex = sessao.itens.find(i => i.codigo === currentCode);
@@ -1123,15 +1123,35 @@ function exportarWhatsGrupo(grupo) {
 function getContagemDia(grupo) {
   const cats = GRUPOS_PEDIDO[grupo] || [];
   const hoje = new Date().toLocaleDateString('pt-BR');
-  // Filtrar histórico local: tipo contagem, data hoje, categoria do grupo
-  return historicoLocal.filter(h => {
+
+  // Pegar todas as movimentações de hoje para os produtos do grupo
+  const movHoje = historicoLocal.filter(h => {
     const dataH = h.data ? new Date(h.data).toLocaleDateString('pt-BR') : '';
     const p = produtosCache[h.codigo] || {};
-    return h.tipo === 'contagem' && dataH === hoje && cats.includes(p.categoria || h.categoria || '');
-  }).map(h => {
-    const p = produtosCache[h.codigo] || {};
-    return { nome: p.nome || h.nome || h.codigo, qtd: h.qtd, unidade: h.unidade || p.unidade || '', categoria: p.categoria || '', colaborador: h.colaborador || '', hora: h.data ? new Date(h.data).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '' };
+    return dataH === hoje && cats.includes(p.categoria || h.categoria || '');
   });
+
+  // Pegar só contagens e calcular entrada do dia por produto
+  const porProduto = {};
+  movHoje.forEach(h => {
+    const cod = h.codigo;
+    if (!porProduto[cod]) {
+      const p = produtosCache[cod] || {};
+      porProduto[cod] = { nome: p.nome || h.nome || cod, unidade: h.unidade || p.unidade || '', colaborador: h.colaborador || '', hora: '', entradaDia: 0, contagem: null, estoqueAnterior: null };
+    }
+    if (h.tipo === 'entrada') {
+      porProduto[cod].entradaDia += parseFloat(h.qtd) || 0;
+    }
+    if (h.tipo === 'contagem') {
+      porProduto[cod].contagem = parseFloat(h.qtd) || 0;
+      porProduto[cod].estoqueAnterior = parseFloat(h.estoqueAnterior ?? h.qtdAnterior ?? null);
+      porProduto[cod].hora = h.data ? new Date(h.data).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '';
+      porProduto[cod].colaborador = h.colaborador || '';
+    }
+  });
+
+  // Retornar só os que tiveram contagem hoje
+  return Object.values(porProduto).filter(p => p.contagem !== null);
 }
 
 function gerarContagemDia(grupo) {
@@ -1144,15 +1164,17 @@ function gerarContagemDia(grupo) {
   let html = '';
   itens.forEach(h => {
     const uni = h.unidade === 'kg' || h.unidade === 'g' ? 'kg' : h.unidade;
+    const anterior = h.estoqueAnterior !== null && !isNaN(h.estoqueAnterior) ? h.estoqueAnterior : '—';
+    const entrada  = h.entradaDia > 0 ? h.entradaDia : '—';
     html += `
-      <div style="background:#fff;border-left:4px solid #2e7d32;border-radius:6px;padding:10px 12px;margin:5px 0;display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <div style="font-weight:600;font-size:0.92rem;">${h.nome}</div>
-          <div style="font-size:0.78rem;color:#777;">${h.hora} · ${h.colaborador}</div>
+      <div style="background:#fff;border-left:4px solid #2e7d32;border-radius:6px;padding:10px 12px;margin:5px 0;">
+        <div style="font-weight:700;font-size:0.93rem;margin-bottom:6px;">${h.nome}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:0.8rem;">
+          <span style="background:#e3f2fd;color:#1565c0;border-radius:5px;padding:3px 8px;">📦 Anterior: <b>${anterior} ${uni}</b></span>
+          <span style="background:#e8f5e9;color:#2e7d32;border-radius:5px;padding:3px 8px;">📥 Entrou: <b>${entrada !== '—' ? '+'+entrada : '—'} ${entrada !== '—' ? uni : ''}</b></span>
+          <span style="background:#fff3e0;color:#e65100;border-radius:5px;padding:3px 8px;">🧮 Contagem: <b>${h.contagem} ${uni}</b></span>
         </div>
-        <div style="background:#2e7d32;color:#fff;border-radius:8px;padding:5px 10px;font-weight:700;font-size:0.88rem;white-space:nowrap;">
-          ${h.qtd} ${uni}
-        </div>
+        <div style="font-size:0.75rem;color:#aaa;margin-top:4px;">${h.hora} · ${h.colaborador}</div>
       </div>`;
   });
   el.innerHTML = html;
@@ -1166,7 +1188,9 @@ function exportarContagemTxt(grupo) {
   let txt = `${titulo} — CONTAGEM ${hoje}\n${'='.repeat(32)}\n`;
   itens.forEach(h => {
     const uni = h.unidade === 'kg' || h.unidade === 'g' ? 'kg' : h.unidade;
-    txt += `• ${h.nome}: ${h.qtd} ${uni} (${h.hora} · ${h.colaborador})\n`;
+    const anterior = h.estoqueAnterior !== null && !isNaN(h.estoqueAnterior) ? `${h.estoqueAnterior} ${uni}` : '—';
+    const entrada  = h.entradaDia > 0 ? `+${h.entradaDia} ${uni}` : '—';
+    txt += `• ${h.nome}\n  Anterior: ${anterior} | Entrou: ${entrada} | Contagem: ${h.contagem} ${uni}\n`;
   });
   navigator.clipboard.writeText(txt)
     .then(() => showToast('📋 Copiado!', 'success'))
@@ -1181,7 +1205,9 @@ function exportarContagemWhats(grupo) {
   let txt = `*${titulo} — CONTAGEM ${hoje}*\n\n`;
   itens.forEach(h => {
     const uni = h.unidade === 'kg' || h.unidade === 'g' ? 'kg' : h.unidade;
-    txt += `• ${h.nome}: *${h.qtd} ${uni}*\n`;
+    const anterior = h.estoqueAnterior !== null && !isNaN(h.estoqueAnterior) ? `${h.estoqueAnterior} ${uni}` : '—';
+    const entrada  = h.entradaDia > 0 ? `+${h.entradaDia} ${uni}` : '—';
+    txt += `• *${h.nome}*\n  📦 ${anterior} | 📥 ${entrada} | 🧮 *${h.contagem} ${uni}*\n`;
   });
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
 }
