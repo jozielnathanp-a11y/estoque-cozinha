@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Estoque – Prensadão</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #222; min-height: 100vh; }
+    header { background: #b71c1c; color: white; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+    header h1 { font-size: 1.2rem; font-weight: 700; }
+    header span { font-size: 0.78rem; opacity: 0.85; }
+    .card { background: #fff; border-radius: 14px; padding: 16px; margin: 12px 14px 0; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .card h3 { font-size: 0.95rem; color: #b71c1c; margin-bottom: 10px; }
+    label { display: block; font-size: 0.8rem; font-weight: 600; color: #555; margin: 8px 0 4px; }
+    input, select { width: 100%; padding: 11px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 0.95rem; background: #fafafa; }
+    input:focus, select:focus { outline: none; border-color: #b71c1c; background: #fff; }
+    .btn { display: block; width: 100%; padding: 13px; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 10px; transition: opacity 0.2s; }
+    .btn:active { opacity: 0.75; }
+    .btn-red   { background: #b71c1c; color: #fff; }
+    .btn-green { background: #2e7d32; color: #fff; }
+    .btn-blue  { background: #1565c0; color: #fff; }
+    .btn-gray  { background: #e0e0e0; color: #444; }
+    #video-container { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #000; }
+    #scanner-video { width: 100%; display: block; max-height: 280px; object-fit: cover; }
+    #scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+    #scan-line { width: 70%; height: 2px; background: #ff3333; box-shadow: 0 0 8px #ff3333; animation: scanAnim 2s linear infinite; }
+    @keyframes scanAnim { 0%,100% { transform: translateY(-60px); } 50% { transform: translateY(60px); } }
+    #scan-frame { position: absolute; width: 70%; aspect-ratio: 2/1; border: 2px solid rgba(255,255,255,0.7); border-radius: 8px; }
+    #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 11px 22px; border-radius: 24px; font-size: 0.88rem; font-weight: 600; opacity: 0; transition: opacity 0.3s; z-index: 9999; white-space: nowrap; pointer-events: none; }
+    #toast.show { opacity: 1; }
+    #toast.success { background: #2e7d32; }
+    #toast.error   { background: #b71c1c; }
+    .sess-ativa { background: #fff3e0; border: 2px solid #e65100; border-radius: 14px; padding: 14px 16px; margin: 12px 14px 0; display: flex; justify-content: space-between; align-items: center; }
+    .sess-ativa .info span { font-weight: 700; color: #e65100; font-size: 0.95rem; }
+    .sess-ativa .info small { color: #888; font-size: 0.8rem; display: block; }
+    .item-sess { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #f0f0f0; }
+    .item-sess .nome { font-weight: 700; font-size: 0.9rem; }
+    .item-sess .qtd  { font-size: 0.78rem; color: #888; }
+    .status-bar { text-align: center; font-size: 0.76rem; color: #888; margin-top: 7px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div><h1>🍳 Estoque – Prensadão</h1><span id="sync-status">⏳ Carregando produtos...</span></div>
+</header>
+
+<!-- IDENTIFICAÇÃO -->
+<div id="card-identificacao" class="card" style="margin-top:14px;">
+  <h3>👤 Identificação</h3>
+  <label>Seu nome *</label>
+  <input type="text" id="sess-colaborador" placeholder="Digite seu nome" />
+  <label>Tipo</label>
+  <select id="sess-tipo">
+    <option value="Entrada">📥 Entrada de produtos</option>
+    <option value="Contagem de estoque">🧮 Contagem de estoque</option>
+    <option value="Saída">📤 Saída</option>
+  </select>
+  <button class="btn btn-red" onclick="iniciarSessao()" style="margin-top:12px;">▶ Iniciar</button>
+</div>
+
+<!-- SESSÃO ATIVA -->
+<div id="sessao-ativa" style="display:none;">
+
+  <div class="sess-ativa" id="sess-header">
+    <div class="info">
+      <span id="sess-label-tipo"></span>
+      <small id="sess-label-colab"></small>
+    </div>
+    <button class="btn btn-gray" onclick="encerrarSessao()" style="width:auto;padding:6px 12px;font-size:0.8rem;margin:0;">✖</button>
+  </div>
+
+  <!-- Multiplicador -->
+  <div class="card" style="background:#fff8e1;border:1px solid #ffe082;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <label style="font-size:0.85rem;color:#e65100;font-weight:700;margin:0;">🔢 Multiplicador</label>
+      <button onclick="limparPreMult()" style="background:none;border:none;color:#888;font-size:0.78rem;cursor:pointer;">Limpar</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <input type="number" id="pre-mult-qtd" placeholder="Qtd/emb." min="1" step="1" inputmode="numeric" style="flex:1;font-size:1rem;" oninput="calcularPreMult()" />
+      <span style="font-weight:700;color:#555;">×</span>
+      <input type="number" id="pre-mult-fator" placeholder="Nº emb." min="1" step="1" inputmode="numeric" style="flex:1;font-size:1rem;" oninput="calcularPreMult()" />
+      <span style="font-weight:700;color:#555;">=</span>
+      <span id="pre-mult-total" style="font-weight:700;font-size:1.1rem;color:#b71c1c;min-width:36px;text-align:right;">—</span>
+    </div>
+  </div>
+
+  <!-- Scanner -->
+  <div class="card">
+    <h3>📷 Escanear</h3>
+    <div id="video-container" style="display:none;">
+      <video id="scanner-video" autoplay muted playsinline></video>
+      <div id="scan-overlay"><div id="scan-frame"></div><div id="scan-line"></div></div>
+    </div>
+    <button class="btn btn-red" id="btn-start" onclick="startScanner()" style="margin-top:0;">▶ Iniciar Câmera</button>
+    <button class="btn btn-gray" id="btn-stop" onclick="stopScanner()" style="display:none;">⏹ Parar Câmera</button>
+    <p class="status-bar" id="scan-status">Toque em "Iniciar Câmera" para escanear</p>
+  </div>
+
+  <!-- Código manual -->
+  <div class="card">
+    <h3>⌨️ Código Manual</h3>
+    <input type="number" id="manual-code" placeholder="Digite o código de barras" inputmode="numeric" />
+    <button class="btn btn-blue" onclick="processBarcode(document.getElementById('manual-code').value)" style="margin-top:8px;">🔍 Buscar</button>
+  </div>
+
+  <!-- Itens -->
+  <div class="card">
+    <h3>📋 Itens desta sessão</h3>
+    <div id="sess-lista"><p style="color:#aaa;font-size:0.85rem;text-align:center;">Nenhum item ainda</p></div>
+  </div>
+
+  <!-- Finalizar -->
+  <div style="padding:0 14px 28px;margin-top:12px;">
+    <button class="btn btn-green" onclick="finalizarSessao()" style="font-size:1rem;padding:14px;">✅ Finalizar</button>
+  </div>
+
+</div>
+
+<!-- MODAL QUANTIDADE (só para kg e pão) -->
+<div id="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;">
+    <h2 id="modal-nome" style="font-size:1.1rem;color:#b71c1c;margin-bottom:4px;"></h2>
+    <p id="modal-estoque" style="font-size:0.8rem;color:#888;margin-bottom:12px;"></p>
+    <label>Quantidade *</label>
+    <input type="number" id="modal-qtd" placeholder="Ex: 5" step="0.01" min="0.01" style="font-size:1.4rem;text-align:center;padding:10px;" />
+    <div id="modal-unidade" style="font-size:0.76rem;color:#888;margin-top:3px;"></div>
+    <button class="btn btn-green" onclick="confirmarModal()" style="margin-top:14px;">✅ Confirmar</button>
+    <button class="btn btn-gray" onclick="fecharModal()">Cancelar</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbzbqIGlW_Rx49ZaInwEHCsLEVFmL67liEdLjQTuZC92DRMc5IuAiVxdFAuPdOTM1axq/exec';
+
+let produtosCache = {};
+let sessao = null;
+let currentCode = '';
+
+// ── SHEETS ──
+async function sheetRead(acao) {
+  return new Promise((resolve) => {
+    const cbName = '_cb_' + Date.now();
+    const url = API + '?acao=' + acao + '&cb=' + encodeURIComponent(cbName);
+    window[cbName] = (data) => { delete window[cbName]; document.head.removeChild(script); resolve(data); };
+    const script = document.createElement('script');
+    script.src = url;
+    script.onerror = () => { delete window[cbName]; resolve(null); };
+    document.head.appendChild(script);
+    setTimeout(() => { if (window[cbName]) { delete window[cbName]; try { document.head.removeChild(script); } catch(e){} resolve(null); } }, 8000);
+  });
+}
+
+async function sheetWrite(params) {
+  const url = API + '?' + Object.entries(params).map(([k,v]) => k + '=' + encodeURIComponent(String(v))).join('&');
+  try { await fetch(url, { mode: 'no-cors' }); return true; } catch(e) { return false; }
+}
+
+async function carregarProdutos() {
+  setSyncStatus('⏳ Carregando...');
+  const cached = localStorage.getItem('produtos_sheets');
+  const ts = parseInt(localStorage.getItem('produtos_sheets_ts') || '0');
+  if (cached && (Date.now() - ts) < 5 * 60 * 1000) {
+    produtosCache = JSON.parse(cached);
+    setSyncStatus('✅ ' + Object.keys(produtosCache).length + ' produtos');
+    return;
+  }
+  const data = await sheetRead('getProdutos');
+  if (data && typeof data === 'object') {
+    produtosCache = data;
+    localStorage.setItem('produtos_sheets', JSON.stringify(data));
+    localStorage.setItem('produtos_sheets_ts', String(Date.now()));
+    setSyncStatus('✅ ' + Object.keys(produtosCache).length + ' produtos');
+  } else if (cached) {
+    produtosCache = JSON.parse(cached);
+    setSyncStatus('⚠️ Offline');
+    showToast('⚠️ Usando cache local', 'error');
+  } else {
+    setSyncStatus('❌ Sem dados');
+  }
+}
+
+function setSyncStatus(msg) { document.getElementById('sync-status').textContent = msg; }
+const getProduto = c => produtosCache[String(c)];
+
+async function atualizarEstoque(codigo, novoEst, mov) {
+  if (produtosCache[codigo]) produtosCache[codigo].estoque = novoEst;
+  localStorage.setItem('produtos_sheets', JSON.stringify(produtosCache));
+  await sheetWrite({ acao: 'movimentacao', dados: JSON.stringify({ ...mov, novoEstoque: novoEst }) });
+}
+
+// ── SESSÃO ──
+function iniciarSessao() {
+  const nome = document.getElementById('sess-colaborador').value.trim();
+  if (!nome) { showToast('Informe seu nome!', 'error'); return; }
+  const tipo = document.getElementById('sess-tipo').value;
+  sessao = { colaborador: nome, tipo, itens: [] };
+  localStorage.setItem('ultimoColaborador', nome);
+  document.getElementById('sess-label-tipo').textContent = tipo;
+  document.getElementById('sess-label-colab').textContent = '👤 ' + nome;
+  document.getElementById('card-identificacao').style.display = 'none';
+  document.getElementById('sessao-ativa').style.display = 'block';
+  renderSessLista();
+}
+
+function encerrarSessao() {
+  if (sessao && sessao.itens.length > 0) {
+    if (!confirm('Descartar ' + sessao.itens.length + ' itens?')) return;
+  }
+  sessao = null; stopScanner();
+  document.getElementById('sessao-ativa').style.display = 'none';
+  document.getElementById('card-identificacao').style.display = 'block';
+  document.getElementById('sess-colaborador').value = localStorage.getItem('ultimoColaborador') || '';
+}
+
+function renderSessLista() {
+  const div = document.getElementById('sess-lista');
+  if (!sessao || !sessao.itens.length) { div.innerHTML = '<p style="color:#aaa;font-size:0.85rem;text-align:center;">Nenhum item ainda</p>'; return; }
+  div.innerHTML = sessao.itens.map((item, i) =>
+    `<div class="item-sess"><div><div class="nome">${item.nome}</div><div class="qtd">${fmtQ(item.qtd, item.unidade)}</div></div>
+    <button onclick="removeSessItem(${i})" style="background:none;border:none;color:#b71c1c;font-size:1.2rem;cursor:pointer;">🗑</button></div>`
+  ).join('');
+}
+
+function removeSessItem(idx) {
+  if (!sessao) return;
+  const item = sessao.itens[idx];
+  const p = getProduto(item.codigo);
+  if (p) {
+    const est = parseFloat(p.estoque) || 0;
+    const ne = sessao.tipo === 'Saída' ? est + item.qtd : est - item.qtd;
+    atualizarEstoque(item.codigo, ne, { codigo: item.codigo, nome: p.nome, tipo: sessao.tipo === 'Saída' ? 'entrada' : 'saida', qtd: item.qtd, unidade: item.unidade, colaborador: sessao.colaborador, obs: 'Remoção de sessão' });
+  }
+  sessao.itens.splice(idx, 1); renderSessLista();
+}
+
+function finalizarSessao() {
+  if (!sessao || !sessao.itens.length) { showToast('Nenhum item para finalizar!', 'error'); return; }
+  showToast('✅ Sessão finalizada e enviada!', 'success');
+  sessao = null; stopScanner();
+  document.getElementById('sessao-ativa').style.display = 'none';
+  document.getElementById('card-identificacao').style.display = 'block';
+  document.getElementById('sess-colaborador').value = localStorage.getItem('ultimoColaborador') || '';
+}
+
+// ── SCANNER ──
+let stream = null, scanInterval = null, lastCode = '', lastCodeTime = 0;
+
+async function startScanner() {
+  try {
+    setScanStatus('Solicitando câmera...');
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } });
+    const video = document.getElementById('scanner-video');
+    video.srcObject = stream; await video.play();
+    document.getElementById('video-container').style.display = 'block';
+    document.getElementById('btn-start').style.display = 'none';
+    document.getElementById('btn-stop').style.display = 'block';
+    setScanStatus('📷 Aponte para o próximo código...');
+    if ('BarcodeDetector' in window) {
+      const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e','itf','codabar'] });
+      scanInterval = setInterval(async () => {
+        if (video.readyState < 2) return;
+        try {
+          const barcodes = await detector.detect(video);
+          if (barcodes.length > 0) {
+            const code = barcodes[0].rawValue;
+            const now = Date.now();
+            if (code === lastCode && now - lastCodeTime < 2000) return;
+            lastCode = code; lastCodeTime = now;
+            setScanStatus('✅ Lido: ' + code);
+            processBarcode(code);
+            setTimeout(() => { if (stream) setScanStatus('📷 Aponte para o próximo código...'); }, 1500);
+          }
+        } catch(e) {}
+      }, 300);
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js';
+      script.onload = () => {
+        const reader = new ZXing.BrowserMultiFormatReader();
+        reader.decodeFromVideoElement(video, (result) => {
+          if (!result) return;
+          const code = result.getText();
+          const now = Date.now();
+          if (code === lastCode && now - lastCodeTime < 2000) return;
+          lastCode = code; lastCodeTime = now;
+          setScanStatus('✅ Lido: ' + code);
+          processBarcode(code);
+          setTimeout(() => { if (stream) setScanStatus('📷 Aponte para o próximo código...'); }, 1500);
+        });
+        window._zxingReader = reader;
+        setScanStatus('📷 Aponte para o código de barras...');
+      };
+      document.head.appendChild(script);
+    }
+  } catch(e) { setScanStatus('❌ Sem acesso à câmera. Use o campo manual.'); }
+}
+
+function stopScanner() {
+  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+  if (window._zxingReader) { try { window._zxingReader.reset(); } catch(e){} window._zxingReader = null; }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  const video = document.getElementById('scanner-video');
+  if (video) video.srcObject = null;
+  document.getElementById('video-container').style.display = 'none';
+  document.getElementById('btn-start').style.display = 'block';
+  document.getElementById('btn-stop').style.display = 'none';
+  setScanStatus('Toque em "Iniciar Câmera" para escanear');
+}
+
+function setScanStatus(msg) { const el = document.getElementById('scan-status'); if(el) el.textContent = msg; }
+
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination); osc.type = 'square';
+    osc.frequency.setValueAtTime(1200, ctx.currentTime); gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.12);
+  } catch(e) {}
+}
+
+function processBarcode(code) {
+  code = String(code).trim();
+  if (!code) return;
+  beep();
+  const p = getProduto(code);
+  if (p) { abrirMovimentacao(code); return; }
+  // Etiqueta balança
+  if (code.length === 13 && code[0] === '2') {
+    const pesoG = parseInt(code.substring(7,12), 10);
+    if (!isNaN(pesoG) && pesoG > 0 && pesoG <= 30000) {
+      const peso = pesoG / 1000;
+      const codProd = code.substring(0,7);
+      if (getProduto(codProd)) { lancarPesoBalanca(codProd, peso); return; }
+    }
+  }
+  showToast('Produto não cadastrado: ' + code, 'error');
+}
+
+function abrirMovimentacao(code) {
+  currentCode = code;
+  const p = getProduto(code);
+  const preTotal = getPreMultTotal();
+  const precisaModal = p.unidade === 'kg' || p.unidade === 'g' || p.categoria === 'Alimentos';
+
+  if (!precisaModal) {
+    const qtd = preTotal || p.qtdPorPct || 1;
+    const tipo = sessao.tipo === 'Saída' ? 'saida' : 'entrada';
+    const est = parseFloat(p.estoque) || 0;
+    if (tipo === 'saida' && est < qtd) { showToast('Estoque insuficiente!', 'error'); return; }
+    const ne = tipo === 'entrada' ? est + qtd : est - qtd;
+    const mov = { codigo: code, nome: p.nome, tipo, qtd, unidade: p.unidade, colaborador: sessao.colaborador, obs: sessao.tipo };
+    atualizarEstoque(code, ne, mov);
+    const ex = sessao.itens.find(i => i.codigo === code);
+    if (ex) ex.qtd += qtd; else sessao.itens.push({ codigo: code, nome: p.nome, qtd, unidade: p.unidade });
+    renderSessLista();
+    showToast('✅ +' + qtd + ' ' + p.unidade + ' — ' + p.nome, 'success');
+    return;
+  }
+
+  // Modal para kg e pão
+  document.getElementById('modal-nome').textContent = p.nome;
+  document.getElementById('modal-estoque').textContent = 'Estoque atual: ' + fmtQ(p.estoque, p.unidade);
+  document.getElementById('modal-unidade').textContent = 'Unidade: ' + p.unidade;
+  document.getElementById('modal-qtd').value = preTotal || '';
+  const mo = document.getElementById('modal-overlay');
+  mo.style.display = 'flex';
+  setTimeout(() => document.getElementById('modal-qtd').focus(), 300);
+}
+
+function fecharModal() { document.getElementById('modal-overlay').style.display = 'none'; currentCode = ''; }
+
+async function confirmarModal() {
+  const qtd = parseFloat(document.getElementById('modal-qtd').value);
+  if (!qtd || qtd <= 0) { showToast('Informe a quantidade!', 'error'); return; }
+  const p = getProduto(currentCode);
+  const tipo = sessao.tipo === 'Saída' ? 'saida' : 'entrada';
+  const est = parseFloat(p.estoque) || 0;
+  if (tipo === 'saida' && qtd > est) { showToast('Quantidade maior que o estoque!', 'error'); return; }
+  const ne = tipo === 'entrada' ? est + qtd : est - qtd;
+  const mov = { codigo: currentCode, nome: p.nome, tipo, qtd, unidade: p.unidade, colaborador: sessao.colaborador, obs: sessao.tipo };
+  await atualizarEstoque(currentCode, ne, mov);
+  const ex = sessao.itens.find(i => i.codigo === currentCode);
+  if (ex) ex.qtd += qtd; else sessao.itens.push({ codigo: currentCode, nome: p.nome, qtd, unidade: p.unidade });
+  renderSessLista();
+  fecharModal();
+  showToast('✅ ' + p.nome + ' — ' + fmtQ(qtd, p.unidade), 'success');
+}
+
+function lancarPesoBalanca(codProduto, pesoKg) {
+  const p = getProduto(codProduto);
+  const ne = (parseFloat(p.estoque) || 0) + pesoKg;
+  const mov = { codigo: codProduto, nome: p.nome, tipo: 'entrada', qtd: pesoKg, unidade: 'kg', colaborador: sessao ? sessao.colaborador : 'Balança', obs: 'Etiqueta balança' };
+  atualizarEstoque(codProduto, ne, mov);
+  if (sessao) { const ex = sessao.itens.find(i => i.codigo === codProduto); if (ex) ex.qtd += pesoKg; else sessao.itens.push({ codigo: codProduto, nome: p.nome, qtd: pesoKg, unidade: 'kg' }); renderSessLista(); }
+  showToast('✅ +' + pesoKg.toFixed(3) + ' kg — ' + p.nome, 'success');
+}
+
+function getPreMultTotal() {
+  const qtd = parseFloat(document.getElementById('pre-mult-qtd').value) || 0;
+  const fat = parseFloat(document.getElementById('pre-mult-fator').value) || 0;
+  return qtd && fat ? qtd * fat : null;
+}
+
+function calcularPreMult() {
+  const qtd = parseFloat(document.getElementById('pre-mult-qtd').value) || 0;
+  const fat = parseFloat(document.getElementById('pre-mult-fator').value) || 0;
+  const tot = qtd && fat ? qtd * fat : 0;
+  document.getElementById('pre-mult-total').textContent = tot ? tot : '—';
+}
+
+function limparPreMult() {
+  document.getElementById('pre-mult-qtd').value = '';
+  document.getElementById('pre-mult-fator').value = '';
+  document.getElementById('pre-mult-total').textContent = '—';
+}
+
+const fmtQ = (qtd, un) => { const unInt = ['pct','PCT','un','UN','und','UND','cx','CX','L']; if (unInt.includes(un)) return Math.round(qtd) + ' ' + un; return (parseFloat(qtd) % 1 === 0 ? parseFloat(qtd) : parseFloat(qtd).toFixed(3)) + ' ' + un; };
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + type;
+  setTimeout(() => { t.className = ''; }, 2800);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const el = document.getElementById('sess-colaborador');
+  if (el) el.value = localStorage.getItem('ultimoColaborador') || '';
+  carregarProdutos();
+});
+</script>
+</body>
+</html>
