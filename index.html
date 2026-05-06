@@ -193,14 +193,40 @@
 <!-- HISTÓRICO -->
 <!-- PEDIDOS -->
 <div id="tab-pedidos" class="screen">
-  <div class="card" style="margin-top:0;">
-    <h3>🛒 Lista de Pedidos</h3>
-    <p style="font-size:0.83rem;color:#555;margin-bottom:10px;">Produtos abaixo do estoque mínimo que precisam ser pedidos.</p>
-    <button class="btn btn-green" onclick="gerarPedidos()" style="margin-bottom:10px;">🔄 Atualizar Lista</button>
-    <button class="btn" onclick="exportarPedidoWhats()" style="margin-bottom:10px;background:#25d366;color:#fff;">📲 Enviar WhatsApp</button>
-    <button class="btn" onclick="exportarPedidoTxt()" style="margin-bottom:10px;">📋 Copiar Relatório</button>
-    <div id="pedidos-lista"></div>
+
+  <!-- BEBIDAS -->
+  <div class="card" style="margin-top:0;border-top:4px solid #1565c0;">
+    <h3>🥤 Pedido — Bebidas</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <button class="btn btn-green" onclick="gerarPedidosGrupo('bebidas')" style="flex:1;">🔄 Atualizar</button>
+      <button class="btn" onclick="exportarWhatsGrupo('bebidas')" style="flex:1;background:#25d366;color:#fff;">📲 WhatsApp</button>
+      <button class="btn" onclick="exportarTxtGrupo('bebidas')" style="flex:1;">📋 Copiar</button>
+    </div>
+    <div id="pedidos-bebidas"></div>
   </div>
+
+  <!-- COZINHA -->
+  <div class="card" style="border-top:4px solid #b71c1c;">
+    <h3>🍖 Pedido — Cozinha</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <button class="btn btn-green" onclick="gerarPedidosGrupo('cozinha')" style="flex:1;">🔄 Atualizar</button>
+      <button class="btn" onclick="exportarWhatsGrupo('cozinha')" style="flex:1;background:#25d366;color:#fff;">📲 WhatsApp</button>
+      <button class="btn" onclick="exportarTxtGrupo('cozinha')" style="flex:1;">📋 Copiar</button>
+    </div>
+    <div id="pedidos-cozinha"></div>
+  </div>
+
+  <!-- EMBALAGENS -->
+  <div class="card" style="border-top:4px solid #6a1e6e;">
+    <h3>📦 Pedido — Embalagens</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <button class="btn btn-green" onclick="gerarPedidosGrupo('embalagens')" style="flex:1;">🔄 Atualizar</button>
+      <button class="btn" onclick="exportarWhatsGrupo('embalagens')" style="flex:1;background:#25d366;color:#fff;">📲 WhatsApp</button>
+      <button class="btn" onclick="exportarTxtGrupo('embalagens')" style="flex:1;">📋 Copiar</button>
+    </div>
+    <div id="pedidos-embalagens"></div>
+  </div>
+
 </div>
 
 <div id="tab-historico" class="screen">
@@ -977,111 +1003,99 @@ function renderEstoque() {
 
 // ── EXPORTAR ──
 // ── PEDIDOS ──
-function gerarPedidos() {
-  const lista = document.getElementById('pedidos-lista');
-  const produtos = Object.values(produtosCache);
-  const baixos = produtos.filter(p => p.estoqueMin != null && parseFloat(p.estoque) < parseFloat(p.estoqueMin));
+// Categorias por grupo
+const GRUPOS_PEDIDO = {
+  bebidas:    ['Bebidas', 'Higiene', 'Temperos'],  // Halls, Trident, Bala, Trufas ficam em Bebidas
+  cozinha:    ['Carnes', 'Frios', 'Hortifruti', 'Alimentos', 'Outros'],
+  embalagens: ['Embalagens', 'Limpeza']
+};
+const TITULOS_GRUPO = { bebidas: '🥤 Bebidas', cozinha: '🍖 Cozinha', embalagens: '📦 Embalagens' };
 
-  if (baixos.length === 0) {
-    lista.innerHTML = '<p style="text-align:center;color:#2e7d32;padding:20px;">✅ Todos os produtos estão acima do mínimo!</p>';
-    return;
-  }
+function filtrarGrupo(grupo) {
+  const cats = GRUPOS_PEDIDO[grupo] || [];
+  return Object.values(produtosCache).filter(p =>
+    p.estoqueMin != null &&
+    parseFloat(p.estoque) < parseFloat(p.estoqueMin) &&
+    cats.includes(p.categoria)
+  );
+}
 
-  // Agrupar por categoria
-  const grupos = {};
-  baixos.forEach(p => {
-    const cat = p.categoria || 'Outros';
-    if (!grupos[cat]) grupos[cat] = [];
-    grupos[cat].push(p);
-  });
-
+function renderLinhasPedido(itens) {
+  if (itens.length === 0) return '<p style="text-align:center;color:#2e7d32;padding:16px;">✅ Tudo no estoque mínimo!</p>';
   let html = '';
-  for (const [cat, itens] of Object.entries(grupos)) {
-    html += `<div style="margin-top:12px;"><strong style="color:#b71c1c;">📂 ${cat}</strong></div>`;
-    itens.forEach(p => {
+  // Agrupar por categoria dentro do grupo
+  const subgrupos = {};
+  itens.forEach(p => {
+    const cat = p.categoria || 'Outros';
+    if (!subgrupos[cat]) subgrupos[cat] = [];
+    subgrupos[cat].push(p);
+  });
+  for (const [cat, ps] of Object.entries(subgrupos)) {
+    html += `<div style="margin:10px 0 4px;font-size:0.8rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;">${cat}</div>`;
+    ps.forEach(p => {
       const atual = parseFloat(p.estoque) || 0;
       const min   = parseFloat(p.estoqueMin);
       const max   = parseFloat(p.estoqueMax || min * 2);
-      const pedir = max - atual;
+      const pedir = +(max - atual).toFixed(3);
       const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
       const cor   = atual === 0 ? '#c62828' : '#e65100';
       html += `
-        <div style="background:#fff;border-left:4px solid ${cor};border-radius:6px;padding:10px 12px;margin:6px 0;display:flex;justify-content:space-between;align-items:center;">
+        <div style="background:#fff;border-left:4px solid ${cor};border-radius:6px;padding:10px 12px;margin:5px 0;display:flex;justify-content:space-between;align-items:center;">
           <div>
-            <div style="font-weight:600;font-size:0.95rem;">${p.nome}</div>
-            <div style="font-size:0.8rem;color:#666;">Atual: <b style="color:${cor}">${atual} ${uni}</b> | Mín: ${min} ${uni} | Máx: ${max} ${uni}</div>
+            <div style="font-weight:600;font-size:0.92rem;">${p.nome}</div>
+            <div style="font-size:0.78rem;color:#777;">Tem: <b style="color:${cor}">${atual} ${uni}</b> | Mín: ${min} | Máx: ${max}</div>
           </div>
-          <div style="background:${cor};color:#fff;border-radius:8px;padding:6px 10px;font-weight:700;white-space:nowrap;">
-            Pedir ${pedir > 0 ? '+' : ''}${pedir} ${uni}
+          <div style="background:${cor};color:#fff;border-radius:8px;padding:5px 10px;font-weight:700;font-size:0.88rem;white-space:nowrap;">
+            +${pedir} ${uni}
           </div>
         </div>`;
     });
   }
-  lista.innerHTML = html;
+  return html;
 }
 
-function exportarPedidoTxt() {
-  const produtos = Object.values(produtosCache);
-  const baixos = produtos.filter(p => p.estoqueMin != null && parseFloat(p.estoque) < parseFloat(p.estoqueMin));
-  if (baixos.length === 0) { showToast('Nenhum produto abaixo do mínimo!', 'info'); return; }
-
-  const hoje = new Date().toLocaleDateString('pt-BR');
-  let txt = `📦 LISTA DE PEDIDOS - ${hoje}\n`;
-  txt += '================================\n';
-
-  const grupos = {};
-  baixos.forEach(p => {
-    const cat = p.categoria || 'Outros';
-    if (!grupos[cat]) grupos[cat] = [];
-    grupos[cat].push(p);
-  });
-
-  for (const [cat, itens] of Object.entries(grupos)) {
-    txt += `\n📂 ${cat.toUpperCase()}\n`;
-    itens.forEach(p => {
-      const atual = parseFloat(p.estoque) || 0;
-      const max   = parseFloat(p.estoqueMax || p.estoqueMin * 2);
-      const pedir = max - atual;
-      const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
-      txt += `• ${p.nome}: pedir ${pedir} ${uni} (tem ${atual} ${uni})\n`;
-    });
-  }
-
-  navigator.clipboard.writeText(txt).then(() => showToast('📋 Copiado!', 'success')).catch(() => {
-    const el = document.createElement('textarea');
-    el.value = txt; document.body.appendChild(el); el.select();
-    document.execCommand('copy'); document.body.removeChild(el);
-    showToast('📋 Copiado!', 'success');
-  });
+function gerarPedidosGrupo(grupo) {
+  const itens = filtrarGrupo(grupo);
+  document.getElementById('pedidos-' + grupo).innerHTML = renderLinhasPedido(itens);
 }
 
-function exportarPedidoWhats() {
-  const produtos = Object.values(produtosCache);
-  const baixos = produtos.filter(p => p.estoqueMin != null && parseFloat(p.estoque) < parseFloat(p.estoqueMin));
-  if (baixos.length === 0) { showToast('Nenhum produto abaixo do mínimo!', 'info'); return; }
-
+function exportarTxtGrupo(grupo) {
+  const itens = filtrarGrupo(grupo);
+  if (itens.length === 0) { showToast('Tudo no estoque mínimo!', 'info'); return; }
   const hoje = new Date().toLocaleDateString('pt-BR');
-  let txt = `📦 *LISTA DE PEDIDOS - ${hoje}*\n\n`;
-
-  const grupos = {};
-  baixos.forEach(p => {
-    const cat = p.categoria || 'Outros';
-    if (!grupos[cat]) grupos[cat] = [];
-    grupos[cat].push(p);
+  const titulo = TITULOS_GRUPO[grupo];
+  let txt = `${titulo} — PEDIDO ${hoje}\n${'='.repeat(32)}\n`;
+  itens.forEach(p => {
+    const atual = parseFloat(p.estoque) || 0;
+    const max   = parseFloat(p.estoqueMax || p.estoqueMin * 2);
+    const pedir = +(max - atual).toFixed(3);
+    const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
+    txt += `• ${p.nome}: pedir ${pedir} ${uni} (tem ${atual} ${uni})\n`;
   });
+  navigator.clipboard.writeText(txt)
+    .then(() => showToast('📋 Copiado!', 'success'))
+    .catch(() => { const el = document.createElement('textarea'); el.value = txt; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); showToast('📋 Copiado!', 'success'); });
+}
 
-  for (const [cat, itens] of Object.entries(grupos)) {
+function exportarWhatsGrupo(grupo) {
+  const itens = filtrarGrupo(grupo);
+  if (itens.length === 0) { showToast('Tudo no estoque mínimo!', 'info'); return; }
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const titulo = TITULOS_GRUPO[grupo];
+  let txt = `*${titulo} — PEDIDO ${hoje}*\n\n`;
+  const subgrupos = {};
+  itens.forEach(p => { const cat = p.categoria || 'Outros'; if (!subgrupos[cat]) subgrupos[cat] = []; subgrupos[cat].push(p); });
+  for (const [cat, ps] of Object.entries(subgrupos)) {
     txt += `📂 *${cat}*\n`;
-    itens.forEach(p => {
+    ps.forEach(p => {
       const atual = parseFloat(p.estoque) || 0;
       const max   = parseFloat(p.estoqueMax || p.estoqueMin * 2);
-      const pedir = max - atual;
+      const pedir = +(max - atual).toFixed(3);
       const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
       txt += `• ${p.nome}: pedir *${pedir} ${uni}* (tem ${atual} ${uni})\n`;
     });
     txt += '\n';
   }
-
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
 }
 
