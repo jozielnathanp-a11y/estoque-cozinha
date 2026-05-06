@@ -1,0 +1,59 @@
+name: Sync Estoque Cozinha
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Buscar produtos do Apps Script
+        run: |
+          curl -s -L \
+            "https://script.google.com/macros/s/AKfycbzbqIGlW_Rx49ZaInwEHCsLEVFmL67liEdLjQTuZC92DRMc5IuAiVxdFAuPdOTM1axq/exec?acao=getProdutos" \
+            -o produtos_new.json
+
+          # Validar JSON
+          python3 -c "
+          import json, sys
+          try:
+            d = json.load(open('produtos_new.json'))
+            if isinstance(d, dict) and len(d) > 0:
+              print(f'OK: {len(d)} produtos')
+            else:
+              print('Dados inválidos')
+              sys.exit(1)
+          except Exception as e:
+            print(f'Erro: {e}')
+            sys.exit(1)
+          "
+
+      - name: Baixar produtos.json atual do estoque-cozinha
+        run: |
+          curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+            "https://raw.githubusercontent.com/jozielnathanp-a11y/estoque-cozinha/main/produtos.json" \
+            -o produtos_atual.json || echo "{}" > produtos_atual.json
+
+      - name: Atualizar se houver mudança
+        run: |
+          if ! diff -q produtos_atual.json produtos_new.json > /dev/null 2>&1; then
+            SHA=$(curl -s -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+              "https://api.github.com/repos/jozielnathanp-a11y/estoque-cozinha/contents/produtos.json" \
+              | python3 -c "import json,sys; print(json.load(sys.stdin).get('sha',''))")
+
+            CONTENT=$(base64 -w 0 produtos_new.json)
+            AGORA=$(date -u '+%d/%m %H:%M')
+
+            curl -s -X PUT \
+              "https://api.github.com/repos/jozielnathanp-a11y/estoque-cozinha/contents/produtos.json" \
+              -H "Authorization: Bearer ${{ secrets.PAT_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "Content-Type: application/json" \
+              -d "{\"message\":\"sync ${AGORA}\",\"content\":\"${CONTENT}\",\"sha\":\"${SHA}\",\"branch\":\"main\"}"
+
+            echo "✅ Estoque atualizado!"
+          else
+            echo "Sem mudanças."
+          fi
