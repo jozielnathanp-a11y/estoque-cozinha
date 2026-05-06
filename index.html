@@ -214,6 +214,16 @@
       <button class="btn" onclick="exportarTxtGrupo('cozinha')" style="flex:1;">📋 Copiar</button>
     </div>
     <div id="pedidos-cozinha"></div>
+    <!-- Contagem do dia - Cozinha -->
+    <div style="border-top:1px dashed #ddd;margin-top:14px;padding-top:12px;">
+      <div style="font-weight:700;color:#b71c1c;margin-bottom:8px;">📋 Contagem do dia — Cozinha</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <button class="btn btn-green" onclick="gerarContagemDia('cozinha')" style="flex:1;">🔄 Atualizar</button>
+        <button class="btn" onclick="exportarContagemWhats('cozinha')" style="flex:1;background:#25d366;color:#fff;">📲 WhatsApp</button>
+        <button class="btn" onclick="exportarContagemTxt('cozinha')" style="flex:1;">📋 Copiar</button>
+      </div>
+      <div id="contagem-cozinha"></div>
+    </div>
   </div>
 
   <!-- EMBALAGENS -->
@@ -225,6 +235,16 @@
       <button class="btn" onclick="exportarTxtGrupo('embalagens')" style="flex:1;">📋 Copiar</button>
     </div>
     <div id="pedidos-embalagens"></div>
+    <!-- Contagem do dia - Embalagens -->
+    <div style="border-top:1px dashed #ddd;margin-top:14px;padding-top:12px;">
+      <div style="font-weight:700;color:#6a1e6e;margin-bottom:8px;">📋 Contagem do dia — Embalagens</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <button class="btn btn-green" onclick="gerarContagemDia('embalagens')" style="flex:1;">🔄 Atualizar</button>
+        <button class="btn" onclick="exportarContagemWhats('embalagens')" style="flex:1;background:#25d366;color:#fff;">📲 WhatsApp</button>
+        <button class="btn" onclick="exportarContagemTxt('embalagens')" style="flex:1;">📋 Copiar</button>
+      </div>
+      <div id="contagem-embalagens"></div>
+    </div>
   </div>
 
 </div>
@@ -1096,6 +1116,73 @@ function exportarWhatsGrupo(grupo) {
     });
     txt += '\n';
   }
+  window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+}
+
+// ── CONTAGEM DO DIA ──
+function getContagemDia(grupo) {
+  const cats = GRUPOS_PEDIDO[grupo] || [];
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  // Filtrar histórico local: tipo contagem, data hoje, categoria do grupo
+  return historicoLocal.filter(h => {
+    const dataH = h.data ? new Date(h.data).toLocaleDateString('pt-BR') : '';
+    const p = produtosCache[h.codigo] || {};
+    return h.tipo === 'contagem' && dataH === hoje && cats.includes(p.categoria || h.categoria || '');
+  }).map(h => {
+    const p = produtosCache[h.codigo] || {};
+    return { nome: p.nome || h.nome || h.codigo, qtd: h.qtd, unidade: h.unidade || p.unidade || '', categoria: p.categoria || '', colaborador: h.colaborador || '', hora: h.data ? new Date(h.data).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '' };
+  });
+}
+
+function gerarContagemDia(grupo) {
+  const el = document.getElementById('contagem-' + grupo);
+  const itens = getContagemDia(grupo);
+  if (itens.length === 0) {
+    el.innerHTML = '<p style="text-align:center;color:#888;padding:12px;font-size:0.85rem;">Nenhuma contagem registrada hoje.</p>';
+    return;
+  }
+  let html = '';
+  itens.forEach(h => {
+    const uni = h.unidade === 'kg' || h.unidade === 'g' ? 'kg' : h.unidade;
+    html += `
+      <div style="background:#fff;border-left:4px solid #2e7d32;border-radius:6px;padding:10px 12px;margin:5px 0;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:600;font-size:0.92rem;">${h.nome}</div>
+          <div style="font-size:0.78rem;color:#777;">${h.hora} · ${h.colaborador}</div>
+        </div>
+        <div style="background:#2e7d32;color:#fff;border-radius:8px;padding:5px 10px;font-weight:700;font-size:0.88rem;white-space:nowrap;">
+          ${h.qtd} ${uni}
+        </div>
+      </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function exportarContagemTxt(grupo) {
+  const itens = getContagemDia(grupo);
+  if (itens.length === 0) { showToast('Nenhuma contagem hoje!', 'info'); return; }
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const titulo = TITULOS_GRUPO[grupo];
+  let txt = `${titulo} — CONTAGEM ${hoje}\n${'='.repeat(32)}\n`;
+  itens.forEach(h => {
+    const uni = h.unidade === 'kg' || h.unidade === 'g' ? 'kg' : h.unidade;
+    txt += `• ${h.nome}: ${h.qtd} ${uni} (${h.hora} · ${h.colaborador})\n`;
+  });
+  navigator.clipboard.writeText(txt)
+    .then(() => showToast('📋 Copiado!', 'success'))
+    .catch(() => { const el = document.createElement('textarea'); el.value = txt; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); showToast('📋 Copiado!', 'success'); });
+}
+
+function exportarContagemWhats(grupo) {
+  const itens = getContagemDia(grupo);
+  if (itens.length === 0) { showToast('Nenhuma contagem hoje!', 'info'); return; }
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const titulo = TITULOS_GRUPO[grupo];
+  let txt = `*${titulo} — CONTAGEM ${hoje}*\n\n`;
+  itens.forEach(h => {
+    const uni = h.unidade === 'kg' || h.unidade === 'g' ? 'kg' : h.unidade;
+    txt += `• ${h.nome}: *${h.qtd} ${uni}*\n`;
+  });
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
 }
 
