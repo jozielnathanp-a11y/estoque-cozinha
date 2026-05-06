@@ -159,27 +159,29 @@ async function sheetWrite(params) {
   try { await fetch(url, { mode: 'no-cors' }); return true; } catch(e) { return false; }
 }
 
+const PRODUTOS_URL = 'https://raw.githubusercontent.com/jozielnathanp-a11y/estoque-cozinha/main/produtos.json';
+
 async function carregarProdutos() {
   setSyncStatus('⏳ Carregando...');
   const cached = localStorage.getItem('produtos_sheets');
   const ts = parseInt(localStorage.getItem('produtos_sheets_ts') || '0');
-  if (cached && (Date.now() - ts) < 5 * 60 * 1000) {
+  if (cached && (Date.now() - ts) < 2 * 60 * 1000) {
     produtosCache = JSON.parse(cached);
     setSyncStatus('✅ ' + Object.keys(produtosCache).length + ' produtos');
     return;
   }
-  const data = await sheetRead('getProdutos');
-  if (data && typeof data === 'object') {
-    produtosCache = data;
-    localStorage.setItem('produtos_sheets', JSON.stringify(data));
-    localStorage.setItem('produtos_sheets_ts', String(Date.now()));
-    setSyncStatus('✅ ' + Object.keys(produtosCache).length + ' produtos');
-  } else if (cached) {
-    produtosCache = JSON.parse(cached);
-    setSyncStatus('⚠️ Offline');
-    showToast('⚠️ Usando cache local', 'error');
-  } else {
-    setSyncStatus('❌ Sem dados');
+  try {
+    const resp = await fetch(PRODUTOS_URL + '?t=' + Date.now());
+    if (resp.ok) {
+      const data = await resp.json();
+      produtosCache = data;
+      localStorage.setItem('produtos_sheets', JSON.stringify(data));
+      localStorage.setItem('produtos_sheets_ts', String(Date.now()));
+      setSyncStatus('✅ ' + Object.keys(produtosCache).length + ' produtos');
+    } else { throw new Error(); }
+  } catch(e) {
+    if (cached) { produtosCache = JSON.parse(cached); setSyncStatus('⚠️ Offline'); }
+    else { setSyncStatus('❌ Sem dados'); }
   }
 }
 
