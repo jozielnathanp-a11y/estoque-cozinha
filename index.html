@@ -978,7 +978,7 @@ function exportCSV() {
 
 function limparHistoricoLocal() {
   const senha = prompt('🔒 Senha:');
-  if (senha !== 'prensadao123') { showToast('❌ Senha incorreta!', 'error'); return; }
+  if (senha !== '261024') { showToast('❌ Senha incorreta!', 'error'); return; }
   if (!confirm('Limpar histórico local?')) return;
   historicoLocal = []; saveHistLocal();
   renderHistorico();
