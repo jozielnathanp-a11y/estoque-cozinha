@@ -80,6 +80,7 @@
 <div class="tabs">
   <div class="tab active" onclick="showTab('scanner',this)">📷 Escanear</div>
   <div class="tab" onclick="showTab('estoque',this)">📦 Estoque</div>
+  <div class="tab" onclick="showTab('pedidos',this)">🛒 Pedidos</div>
   <div class="tab" onclick="showTab('historico',this)">📋 Histórico</div>
   <div class="tab" onclick="showTab('exportar',this)">⚙️ Admin</div>
 </div>
@@ -190,6 +191,18 @@
 </div>
 
 <!-- HISTÓRICO -->
+<!-- PEDIDOS -->
+<div id="tab-pedidos" class="screen">
+  <div class="card" style="margin-top:0;">
+    <h3>🛒 Lista de Pedidos</h3>
+    <p style="font-size:0.83rem;color:#555;margin-bottom:10px;">Produtos abaixo do estoque mínimo que precisam ser pedidos.</p>
+    <button class="btn btn-green" onclick="gerarPedidos()" style="margin-bottom:10px;">🔄 Atualizar Lista</button>
+    <button class="btn" onclick="exportarPedidoWhats()" style="margin-bottom:10px;background:#25d366;color:#fff;">📲 Enviar WhatsApp</button>
+    <button class="btn" onclick="exportarPedidoTxt()" style="margin-bottom:10px;">📋 Copiar Relatório</button>
+    <div id="pedidos-lista"></div>
+  </div>
+</div>
+
 <div id="tab-historico" class="screen">
   <div id="historico-lista"></div>
 </div>
@@ -963,6 +976,115 @@ function renderEstoque() {
 }
 
 // ── EXPORTAR ──
+// ── PEDIDOS ──
+function gerarPedidos() {
+  const lista = document.getElementById('pedidos-lista');
+  const produtos = Object.values(produtosCache);
+  const baixos = produtos.filter(p => p.estoqueMin != null && parseFloat(p.estoque) < parseFloat(p.estoqueMin));
+
+  if (baixos.length === 0) {
+    lista.innerHTML = '<p style="text-align:center;color:#2e7d32;padding:20px;">✅ Todos os produtos estão acima do mínimo!</p>';
+    return;
+  }
+
+  // Agrupar por categoria
+  const grupos = {};
+  baixos.forEach(p => {
+    const cat = p.categoria || 'Outros';
+    if (!grupos[cat]) grupos[cat] = [];
+    grupos[cat].push(p);
+  });
+
+  let html = '';
+  for (const [cat, itens] of Object.entries(grupos)) {
+    html += `<div style="margin-top:12px;"><strong style="color:#b71c1c;">📂 ${cat}</strong></div>`;
+    itens.forEach(p => {
+      const atual = parseFloat(p.estoque) || 0;
+      const min   = parseFloat(p.estoqueMin);
+      const max   = parseFloat(p.estoqueMax || min * 2);
+      const pedir = max - atual;
+      const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
+      const cor   = atual === 0 ? '#c62828' : '#e65100';
+      html += `
+        <div style="background:#fff;border-left:4px solid ${cor};border-radius:6px;padding:10px 12px;margin:6px 0;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:600;font-size:0.95rem;">${p.nome}</div>
+            <div style="font-size:0.8rem;color:#666;">Atual: <b style="color:${cor}">${atual} ${uni}</b> | Mín: ${min} ${uni} | Máx: ${max} ${uni}</div>
+          </div>
+          <div style="background:${cor};color:#fff;border-radius:8px;padding:6px 10px;font-weight:700;white-space:nowrap;">
+            Pedir ${pedir > 0 ? '+' : ''}${pedir} ${uni}
+          </div>
+        </div>`;
+    });
+  }
+  lista.innerHTML = html;
+}
+
+function exportarPedidoTxt() {
+  const produtos = Object.values(produtosCache);
+  const baixos = produtos.filter(p => p.estoqueMin != null && parseFloat(p.estoque) < parseFloat(p.estoqueMin));
+  if (baixos.length === 0) { showToast('Nenhum produto abaixo do mínimo!', 'info'); return; }
+
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  let txt = `📦 LISTA DE PEDIDOS - ${hoje}\n`;
+  txt += '================================\n';
+
+  const grupos = {};
+  baixos.forEach(p => {
+    const cat = p.categoria || 'Outros';
+    if (!grupos[cat]) grupos[cat] = [];
+    grupos[cat].push(p);
+  });
+
+  for (const [cat, itens] of Object.entries(grupos)) {
+    txt += `\n📂 ${cat.toUpperCase()}\n`;
+    itens.forEach(p => {
+      const atual = parseFloat(p.estoque) || 0;
+      const max   = parseFloat(p.estoqueMax || p.estoqueMin * 2);
+      const pedir = max - atual;
+      const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
+      txt += `• ${p.nome}: pedir ${pedir} ${uni} (tem ${atual} ${uni})\n`;
+    });
+  }
+
+  navigator.clipboard.writeText(txt).then(() => showToast('📋 Copiado!', 'success')).catch(() => {
+    const el = document.createElement('textarea');
+    el.value = txt; document.body.appendChild(el); el.select();
+    document.execCommand('copy'); document.body.removeChild(el);
+    showToast('📋 Copiado!', 'success');
+  });
+}
+
+function exportarPedidoWhats() {
+  const produtos = Object.values(produtosCache);
+  const baixos = produtos.filter(p => p.estoqueMin != null && parseFloat(p.estoque) < parseFloat(p.estoqueMin));
+  if (baixos.length === 0) { showToast('Nenhum produto abaixo do mínimo!', 'info'); return; }
+
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  let txt = `📦 *LISTA DE PEDIDOS - ${hoje}*\n\n`;
+
+  const grupos = {};
+  baixos.forEach(p => {
+    const cat = p.categoria || 'Outros';
+    if (!grupos[cat]) grupos[cat] = [];
+    grupos[cat].push(p);
+  });
+
+  for (const [cat, itens] of Object.entries(grupos)) {
+    txt += `📂 *${cat}*\n`;
+    itens.forEach(p => {
+      const atual = parseFloat(p.estoque) || 0;
+      const max   = parseFloat(p.estoqueMax || p.estoqueMin * 2);
+      const pedir = max - atual;
+      const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
+      txt += `• ${p.nome}: pedir *${pedir} ${uni}* (tem ${atual} ${uni})\n`;
+    });
+    txt += '\n';
+  }
+
+  window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+}
+
 function exportCSV() {
   let csv = 'Data,Produto,Tipo,Quantidade,Unidade,Colaborador,Obs\n';
   historicoLocal.forEach(h => {
