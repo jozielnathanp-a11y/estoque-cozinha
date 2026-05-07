@@ -537,6 +537,7 @@ function showTab(name, el) {
   if (el) el.classList.add('active');
   if (name === 'estoque')   renderEstoque();
   if (name === 'historico') renderHistorico();
+  if (name === 'pedidos')   { carregarProdutos(true).then(() => { gerarPedidosGrupo('bebidas'); gerarPedidosGrupo('cozinha'); gerarPedidosGrupo('embalagens'); }); }
   if (name !== 'scanner')   stopScanner();
 }
 
@@ -1125,13 +1126,12 @@ function gerarTodosGrupo(grupo) {
     html += `<div style="margin:10px 0 4px;font-size:0.8rem;font-weight:700;color:#555;text-transform:uppercase;">${cat}</div>`;
     ps.sort((a,b) => a.nome.localeCompare(b.nome)).forEach(p => {
       const atual = parseFloat(p.estoque) || 0;
-      const min   = p.estoqueMin != null ? parseFloat(p.estoqueMin) : null;
-      const max   = p.estoqueMax != null ? parseFloat(p.estoqueMax) : null;
+      const min   = p.estoqueMin != null && p.estoqueMin !== '' ? parseFloat(p.estoqueMin) : null;
+      const max   = p.estoqueMax != null && p.estoqueMax !== '' && parseFloat(p.estoqueMax) > 0 ? parseFloat(p.estoqueMax) : (min != null ? min : null);
       const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
       const baixo = min != null && atual < min;
       const cor   = baixo ? (atual === 0 ? '#c62828' : '#e65100') : '#2e7d32';
       const status = baixo ? (atual === 0 ? '🔴' : '🟠') : '🟢';
-      // Sempre mostrar quanto pedir para chegar ao máximo
       const pedir = max != null ? +(max - atual).toFixed(3) : null;
       html += `
         <div style="background:#fff;border-left:4px solid ${cor};border-radius:6px;padding:9px 12px;margin:4px 0;display:flex;justify-content:space-between;align-items:center;">
