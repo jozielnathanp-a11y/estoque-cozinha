@@ -191,6 +191,15 @@ const getProduto = c => produtosCache[String(c)];
 async function atualizarEstoque(codigo, novoEst, mov) {
   if (produtosCache[codigo]) produtosCache[codigo].estoque = novoEst;
   localStorage.setItem('produtos_sheets', JSON.stringify(produtosCache));
+
+  // Salvar no hist_local (compartilhado com o relatório do index.html)
+  const movCompleto = { ...mov, ts: new Date().toISOString(), novoEstoque: novoEst, estoqueAnterior: mov.estoqueAnterior ?? 0 };
+  const hist = JSON.parse(localStorage.getItem('hist_local') || '[]');
+  hist.unshift(movCompleto);
+  // Manter apenas últimos 500 registros para não sobrecarregar
+  if (hist.length > 500) hist.splice(500);
+  localStorage.setItem('hist_local', JSON.stringify(hist));
+
   await sheetWrite({ acao: 'movimentacao', dados: JSON.stringify({ ...mov, novoEstoque: novoEst }) });
   sincronizarGitHub();
 }
@@ -365,7 +374,7 @@ function abrirMovimentacao(code) {
     const est = parseFloat(p.estoque) || 0;
     if (tipo === 'saida' && est < qtd) { showToast('Estoque insuficiente!', 'error'); return; }
     const ne = isContagem ? qtd : (tipo === 'entrada' ? est + qtd : est - qtd);
-    const mov = { codigo: code, nome: p.nome, tipo: isContagem ? 'contagem' : tipo, qtd, unidade: p.unidade, colaborador: sessao.colaborador, obs: isContagem ? 'Contagem' : sessao.tipo };
+    const mov = { codigo: code, nome: p.nome, tipo: isContagem ? 'contagem' : tipo, qtd, unidade: p.unidade, colaborador: sessao.colaborador, obs: isContagem ? 'Contagem' : sessao.tipo, estoqueAnterior: est };
     atualizarEstoque(code, ne, mov);
     const ex = sessao.itens.find(i => i.codigo === code);
     if (ex) ex.qtd += qtd; else sessao.itens.push({ codigo: code, nome: p.nome, qtd, unidade: p.unidade });
@@ -395,7 +404,7 @@ async function confirmarModal() {
   const est = parseFloat(p.estoque) || 0;
   if (tipo === 'saida' && qtd > est) { showToast('Quantidade maior que o estoque!', 'error'); return; }
   const ne = isContagem ? qtd : (tipo === 'entrada' ? est + qtd : est - qtd);
-  const mov = { codigo: currentCode, nome: p.nome, tipo: isContagem ? 'contagem' : tipo, qtd, unidade: p.unidade, colaborador: sessao.colaborador, obs: isContagem ? 'Contagem' : sessao.tipo };
+  const mov = { codigo: currentCode, nome: p.nome, tipo: isContagem ? 'contagem' : tipo, qtd, unidade: p.unidade, colaborador: sessao.colaborador, obs: isContagem ? 'Contagem' : sessao.tipo, estoqueAnterior: est };
   await atualizarEstoque(currentCode, ne, mov);
   const ex = sessao.itens.find(i => i.codigo === currentCode);
   if (ex) ex.qtd += qtd; else sessao.itens.push({ codigo: currentCode, nome: p.nome, qtd, unidade: p.unidade });
