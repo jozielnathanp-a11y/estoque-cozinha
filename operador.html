@@ -349,15 +349,6 @@ function processBarcode(code) {
   beep();
   const p = getProduto(code);
   if (p) { abrirMovimentacao(code); return; }
-  // Etiqueta balança
-  if (code.length === 13 && code[0] === '2') {
-    const pesoG = parseInt(code.substring(7,12), 10);
-    if (!isNaN(pesoG) && pesoG > 0 && pesoG <= 30000) {
-      const peso = pesoG / 1000;
-      const codProd = code.substring(0,7);
-      if (getProduto(codProd)) { lancarPesoBalanca(codProd, peso); return; }
-    }
-  }
   showToast('Produto não cadastrado: ' + code, 'error');
 }
 
@@ -413,14 +404,7 @@ async function confirmarModal() {
   showToast('✅ ' + p.nome + ' — ' + fmtQ(qtd, p.unidade), 'success');
 }
 
-function lancarPesoBalanca(codProduto, pesoKg) {
-  const p = getProduto(codProduto);
-  const ne = (parseFloat(p.estoque) || 0) + pesoKg;
-  const mov = { codigo: codProduto, nome: p.nome, tipo: 'entrada', qtd: pesoKg, unidade: 'kg', colaborador: sessao ? sessao.colaborador : 'Balança', obs: 'Etiqueta balança' };
-  atualizarEstoque(codProduto, ne, mov);
-  if (sessao) { const ex = sessao.itens.find(i => i.codigo === codProduto); if (ex) ex.qtd += pesoKg; else sessao.itens.push({ codigo: codProduto, nome: p.nome, qtd: pesoKg, unidade: 'kg' }); renderSessLista(); }
-  showToast('✅ +' + pesoKg.toFixed(3) + ' kg — ' + p.nome, 'success');
-}
+
 
 function getPreMultTotal() {
   const qtd = parseFloat(document.getElementById('pre-mult-qtd').value) || 0;
