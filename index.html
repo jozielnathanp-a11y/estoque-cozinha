@@ -200,7 +200,7 @@
     <!-- Abas Bebidas -->
     <div style="display:flex;border-bottom:2px solid #e0e0e0;margin-bottom:10px;">
       <button id="tab-beb-pedido" onclick="switchBebTab('pedido')" style="flex:1;padding:7px;border:none;background:#1565c0;color:#fff;font-weight:700;border-radius:6px 0 0 0;cursor:pointer;">🔴 Abaixo do mínimo</button>
-      <button id="tab-beb-todos" onclick="switchBebTab('todos')" style="flex:1;padding:7px;border:none;background:#e0e0e0;color:#555;font-weight:700;border-radius:0 6px 0 0;cursor:pointer;">📋 Situação completa</button>
+      <button id="tab-beb-todos" onclick="switchBebTab('todos')" style="flex:1;padding:7px;border:none;background:#e0e0e0;color:#555;font-weight:700;border-radius:0 6px 0 0;cursor:pointer;">📋 Fazer Pedido</button>
     </div>
     <!-- Abaixo do mínimo -->
     <div id="beb-pedido-section">
@@ -1131,7 +1131,8 @@ function gerarTodosGrupo(grupo) {
       const baixo = min != null && atual < min;
       const cor   = baixo ? (atual === 0 ? '#c62828' : '#e65100') : '#2e7d32';
       const status = baixo ? (atual === 0 ? '🔴' : '🟠') : '🟢';
-      const pedir = max != null && baixo ? `→ pedir +${+(max - atual).toFixed(3)} ${uni}` : '';
+      // Sempre mostrar quanto pedir para chegar ao máximo
+      const pedir = max != null ? +(max - atual).toFixed(3) : null;
       html += `
         <div style="background:#fff;border-left:4px solid ${cor};border-radius:6px;padding:9px 12px;margin:4px 0;display:flex;justify-content:space-between;align-items:center;">
           <div>
@@ -1141,7 +1142,7 @@ function gerarTodosGrupo(grupo) {
               ${min != null ? `| Mín: ${min} | Máx: ${max ?? '—'}` : ''}
             </div>
           </div>
-          ${pedir ? `<div style="font-size:0.78rem;background:${cor};color:#fff;border-radius:6px;padding:4px 8px;white-space:nowrap;">${pedir}</div>` : ''}
+          ${pedir !== null ? `<div style="font-size:0.78rem;background:${cor};color:#fff;border-radius:6px;padding:4px 8px;white-space:nowrap;">${pedir > 0 ? '+'+pedir : pedir} ${uni}</div>` : ''}
         </div>`;
     });
   }
@@ -1154,15 +1155,15 @@ function exportarTxtGrupoTodos(grupo) {
   if (itens.length === 0) { showToast('Nenhum produto!', 'info'); return; }
   const hoje = new Date().toLocaleDateString('pt-BR');
   const titulo = TITULOS_GRUPO[grupo];
-  let txt = `${titulo} — SITUAÇÃO COMPLETA ${hoje}\n${'='.repeat(36)}\n`;
+  let txt = `${titulo} — PEDIDO ${hoje}\n${'='.repeat(36)}\n`;
   itens.sort((a,b) => a.nome.localeCompare(b.nome)).forEach(p => {
     const atual = parseFloat(p.estoque) || 0;
     const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
-    const min   = p.estoqueMin != null ? `Mín: ${p.estoqueMin}` : '';
-    const max   = p.estoqueMax != null ? `Máx: ${p.estoqueMax}` : '';
+    const max   = p.estoqueMax != null ? parseFloat(p.estoqueMax) : null;
+    const pedir = max != null ? +(max - atual).toFixed(3) : '—';
     const baixo = p.estoqueMin != null && atual < parseFloat(p.estoqueMin);
-    const pedir = baixo && p.estoqueMax ? ` → PEDIR +${+(parseFloat(p.estoqueMax)-atual).toFixed(3)} ${uni}` : '';
-    txt += `• ${p.nome}: ${atual} ${uni} ${[min,max].filter(Boolean).join(' | ')}${pedir}\n`;
+    const alerta = baixo ? ' ⚠️' : '';
+    txt += `• ${p.nome}: tem ${atual} ${uni} → pedir ${pedir > 0 ? '+'+pedir : pedir} ${uni}${alerta}\n`;
   });
   navigator.clipboard.writeText(txt)
     .then(() => showToast('📋 Copiado!', 'success'))
@@ -1175,14 +1176,16 @@ function exportarWhatsGrupoTodos(grupo) {
   if (itens.length === 0) { showToast('Nenhum produto!', 'info'); return; }
   const hoje = new Date().toLocaleDateString('pt-BR');
   const titulo = TITULOS_GRUPO[grupo];
-  let txt = `*${titulo} — SITUAÇÃO COMPLETA ${hoje}*\n\n`;
+  let txt = `*${titulo} — PEDIDO ${hoje}*\n\n`;
   itens.sort((a,b) => a.nome.localeCompare(b.nome)).forEach(p => {
     const atual = parseFloat(p.estoque) || 0;
     const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
+    const max   = p.estoqueMax != null ? parseFloat(p.estoqueMax) : null;
+    const pedir = max != null ? +(max - atual).toFixed(3) : null;
     const baixo = p.estoqueMin != null && atual < parseFloat(p.estoqueMin);
     const status = baixo ? (atual === 0 ? '🔴' : '🟠') : '🟢';
-    const pedir = baixo && p.estoqueMax ? ` → pedir *+${+(parseFloat(p.estoqueMax)-atual).toFixed(3)} ${uni}*` : '';
-    txt += `${status} ${p.nome}: *${atual} ${uni}*${pedir}\n`;
+    const pedirTxt = pedir !== null ? ` → pedir *${pedir > 0 ? '+'+pedir : pedir} ${uni}*` : '';
+    txt += `${status} ${p.nome}: *${atual} ${uni}*${pedirTxt}\n`;
   });
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
 }
