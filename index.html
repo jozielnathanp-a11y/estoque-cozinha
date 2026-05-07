@@ -197,12 +197,29 @@
   <!-- BEBIDAS -->
   <div class="card" style="margin-top:0;border-top:4px solid #1565c0;">
     <h3>🥤 Pedido — Bebidas</h3>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-      <button class="btn btn-green" onclick="gerarPedidosGrupo('bebidas')" style="flex:1;">🔄 Atualizar</button>
-      <button class="btn" onclick="exportarWhatsGrupo('bebidas')" style="flex:1;background:#25d366;color:#fff;">📲 WhatsApp</button>
-      <button class="btn" onclick="exportarTxtGrupo('bebidas')" style="flex:1;">📋 Copiar</button>
+    <!-- Abas Bebidas -->
+    <div style="display:flex;border-bottom:2px solid #e0e0e0;margin-bottom:10px;">
+      <button id="tab-beb-pedido" onclick="switchBebTab('pedido')" style="flex:1;padding:7px;border:none;background:#1565c0;color:#fff;font-weight:700;border-radius:6px 0 0 0;cursor:pointer;">🔴 Abaixo do mínimo</button>
+      <button id="tab-beb-todos" onclick="switchBebTab('todos')" style="flex:1;padding:7px;border:none;background:#e0e0e0;color:#555;font-weight:700;border-radius:0 6px 0 0;cursor:pointer;">📋 Situação completa</button>
     </div>
-    <div id="pedidos-bebidas"></div>
+    <!-- Abaixo do mínimo -->
+    <div id="beb-pedido-section">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <button class="btn btn-green" onclick="gerarPedidosGrupo('bebidas')" style="flex:1;">🔄 Atualizar</button>
+        <button class="btn" onclick="exportarWhatsGrupo('bebidas')" style="flex:1;background:#25d366;color:#fff;">📲 WhatsApp</button>
+        <button class="btn" onclick="exportarTxtGrupo('bebidas')" style="flex:1;">📋 Copiar</button>
+      </div>
+      <div id="pedidos-bebidas"></div>
+    </div>
+    <!-- Situação completa -->
+    <div id="beb-todos-section" style="display:none;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <button class="btn btn-green" onclick="gerarTodosGrupo('bebidas')" style="flex:1;">🔄 Atualizar</button>
+        <button class="btn" onclick="exportarWhatsGrupoTodos('bebidas')" style="flex:1;background:#25d366;color:#fff;">📲 WhatsApp</button>
+        <button class="btn" onclick="exportarTxtGrupoTodos('bebidas')" style="flex:1;">📋 Copiar</button>
+      </div>
+      <div id="todos-bebidas"></div>
+    </div>
   </div>
 
   <!-- COZINHA -->
@@ -1072,6 +1089,93 @@ function renderLinhasPedido(itens) {
     });
   }
   return html;
+}
+
+// ── ABA BEBIDAS ──
+function switchBebTab(aba) {
+  document.getElementById('beb-pedido-section').style.display = aba === 'pedido' ? '' : 'none';
+  document.getElementById('beb-todos-section').style.display  = aba === 'todos'  ? '' : 'none';
+  document.getElementById('tab-beb-pedido').style.background = aba === 'pedido' ? '#1565c0' : '#e0e0e0';
+  document.getElementById('tab-beb-pedido').style.color      = aba === 'pedido' ? '#fff' : '#555';
+  document.getElementById('tab-beb-todos').style.background  = aba === 'todos'  ? '#1565c0' : '#e0e0e0';
+  document.getElementById('tab-beb-todos').style.color       = aba === 'todos'  ? '#fff' : '#555';
+  if (aba === 'todos') gerarTodosGrupo('bebidas');
+}
+
+function gerarTodosGrupo(grupo) {
+  const cats = GRUPOS_PEDIDO[grupo] || [];
+  const itens = Object.values(produtosCache).filter(p => cats.includes(p.categoria));
+  const el = document.getElementById('todos-' + grupo);
+  if (itens.length === 0) { el.innerHTML = '<p style="text-align:center;color:#888;padding:16px;">Nenhum produto cadastrado.</p>'; return; }
+
+  const subgrupos = {};
+  itens.forEach(p => { const cat = p.categoria || 'Outros'; if (!subgrupos[cat]) subgrupos[cat] = []; subgrupos[cat].push(p); });
+
+  let html = '';
+  for (const [cat, ps] of Object.entries(subgrupos)) {
+    html += `<div style="margin:10px 0 4px;font-size:0.8rem;font-weight:700;color:#555;text-transform:uppercase;">${cat}</div>`;
+    ps.sort((a,b) => a.nome.localeCompare(b.nome)).forEach(p => {
+      const atual = parseFloat(p.estoque) || 0;
+      const min   = p.estoqueMin != null ? parseFloat(p.estoqueMin) : null;
+      const max   = p.estoqueMax != null ? parseFloat(p.estoqueMax) : null;
+      const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
+      const baixo = min != null && atual < min;
+      const cor   = baixo ? (atual === 0 ? '#c62828' : '#e65100') : '#2e7d32';
+      const status = baixo ? (atual === 0 ? '🔴' : '🟠') : '🟢';
+      const pedir = max != null && baixo ? `→ pedir +${+(max - atual).toFixed(3)} ${uni}` : '';
+      html += `
+        <div style="background:#fff;border-left:4px solid ${cor};border-radius:6px;padding:9px 12px;margin:4px 0;display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:600;font-size:0.9rem;">${status} ${p.nome}</div>
+            <div style="font-size:0.76rem;color:#777;">
+              Estoque: <b style="color:${cor}">${atual} ${uni}</b>
+              ${min != null ? `| Mín: ${min} | Máx: ${max ?? '—'}` : ''}
+            </div>
+          </div>
+          ${pedir ? `<div style="font-size:0.78rem;background:${cor};color:#fff;border-radius:6px;padding:4px 8px;white-space:nowrap;">${pedir}</div>` : ''}
+        </div>`;
+    });
+  }
+  el.innerHTML = html;
+}
+
+function exportarTxtGrupoTodos(grupo) {
+  const cats = GRUPOS_PEDIDO[grupo] || [];
+  const itens = Object.values(produtosCache).filter(p => cats.includes(p.categoria));
+  if (itens.length === 0) { showToast('Nenhum produto!', 'info'); return; }
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const titulo = TITULOS_GRUPO[grupo];
+  let txt = `${titulo} — SITUAÇÃO COMPLETA ${hoje}\n${'='.repeat(36)}\n`;
+  itens.sort((a,b) => a.nome.localeCompare(b.nome)).forEach(p => {
+    const atual = parseFloat(p.estoque) || 0;
+    const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
+    const min   = p.estoqueMin != null ? `Mín: ${p.estoqueMin}` : '';
+    const max   = p.estoqueMax != null ? `Máx: ${p.estoqueMax}` : '';
+    const baixo = p.estoqueMin != null && atual < parseFloat(p.estoqueMin);
+    const pedir = baixo && p.estoqueMax ? ` → PEDIR +${+(parseFloat(p.estoqueMax)-atual).toFixed(3)} ${uni}` : '';
+    txt += `• ${p.nome}: ${atual} ${uni} ${[min,max].filter(Boolean).join(' | ')}${pedir}\n`;
+  });
+  navigator.clipboard.writeText(txt)
+    .then(() => showToast('📋 Copiado!', 'success'))
+    .catch(() => { const el = document.createElement('textarea'); el.value = txt; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); showToast('📋 Copiado!', 'success'); });
+}
+
+function exportarWhatsGrupoTodos(grupo) {
+  const cats = GRUPOS_PEDIDO[grupo] || [];
+  const itens = Object.values(produtosCache).filter(p => cats.includes(p.categoria));
+  if (itens.length === 0) { showToast('Nenhum produto!', 'info'); return; }
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const titulo = TITULOS_GRUPO[grupo];
+  let txt = `*${titulo} — SITUAÇÃO COMPLETA ${hoje}*\n\n`;
+  itens.sort((a,b) => a.nome.localeCompare(b.nome)).forEach(p => {
+    const atual = parseFloat(p.estoque) || 0;
+    const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
+    const baixo = p.estoqueMin != null && atual < parseFloat(p.estoqueMin);
+    const status = baixo ? (atual === 0 ? '🔴' : '🟠') : '🟢';
+    const pedir = baixo && p.estoqueMax ? ` → pedir *+${+(parseFloat(p.estoqueMax)-atual).toFixed(3)} ${uni}*` : '';
+    txt += `${status} ${p.nome}: *${atual} ${uni}*${pedir}\n`;
+  });
+  window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
 }
 
 function gerarPedidosGrupo(grupo) {
