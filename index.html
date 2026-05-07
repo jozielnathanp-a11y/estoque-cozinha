@@ -1097,42 +1097,7 @@ function _getColsSelecionadas() {
 }
 
 
-unction injetarContagem() {
-  var hist = JSON.parse(localStorage.getItem('hist_local') || '[]');
-  var hoje = '2026-05-07';
-  var dtFn = function(ts){ var d=new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
-  hist = hist.filter(function(m){ return !m.ts || dtFn(m.ts) !== hoje || m.colaborador !== 'Manual'; });
-  novos.forEach(function(m){ hist.unshift(m); });
-  localStorage.setItem('hist_local', JSON.stringify(hist));
-  historicoLocal = hist;
-  showToast('Registros atualizados!', 'success');
-}unction injetarContagem() {
-  var hist = JSON.parse(localStorage.getItem('hist_local') || '[]');
-  var hoje = '2026-05-07';
-  var dtFn = function(ts){ var d=new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
-  hist = hist.filter(function(m){ return !m.ts || dtFn(m.ts) !== hoje || m.colaborador !== 'Manual'; });
-  novos.forEach(function(m){ hist.unshift(m); });
-  localStorage.setItem('hist_local', JSON.stringify(hist));
-  historicoLocal = hist;
-  showToast('Registros atualizados!', 'success');
-}unction injetarContagem() {
-  var hist = JSON.parse(localStorage.getItem('hist_local') || '[]');
-  // Pegar códigos que já têm lançamento REAL hoje (não-manual)
-  var dtFn = function(ts){ var d=new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
-  var hoje = '2026-05-07';
-  var codsReais = {};
-  hist.forEach(function(m){ if(m.ts && dtFn(m.ts)===hoje && m.colaborador !== 'Manual') codsReais[m.codigo] = true; });
-  // Remover apenas os manuais de hoje
-  hist = hist.filter(function(m){ return !m.ts || dtFn(m.ts) !== hoje || m.colaborador !== 'Manual'; });
-  // Adicionar apenas os que NÃO têm lançamento real
-  var adicionados = 0;
-  novos.forEach(function(m){ if(!codsReais[m.codigo]){ hist.unshift(m); adicionados++; } });
-  localStorage.setItem('hist_local', JSON.stringify(hist));
-  historicoLocal = hist;
-  showToast('✅ ' + adicionados + ' injetados, ' + Object.keys(codsReais).length + ' preservados do scanner!', 'success');
-}
-
-unction debugHist() {
+function debugHist() {
   historicoLocal = JSON.parse(localStorage.getItem('hist_local') || '[]');
   const data = document.getElementById('rel-data').value || new Date().toISOString().slice(0,10);
   const hist = historicoLocal.filter(m => m.ts && m.ts.slice(0,10) === data);
