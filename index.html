@@ -280,6 +280,34 @@
     </div>
     <div id="relatorio-contagem"></div>
   </div>
+  <!-- Lançamento Manual de Contagem -->
+  <div class="card" style="border-top:4px solid #6a1b9a;margin-top:12px;">
+    <h3>✏️ Lançar Contagem Manual</h3>
+    <div style="margin-bottom:10px;">
+      <label>Data</label>
+      <input type="date" id="manual-data" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;font-size:0.9rem;margin-bottom:8px;">
+      <label>Produto</label>
+      <select id="manual-produto" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;font-size:0.9rem;margin-bottom:8px;">
+        <option value="">— Selecionar —</option>
+      </select>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <div style="flex:1;">
+          <label style="font-size:0.78rem;">Anterior</label>
+          <input type="number" id="manual-anterior" step="0.001" min="0" placeholder="0" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;">
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:0.78rem;">Entrada</label>
+          <input type="number" id="manual-entrada" step="0.001" min="0" placeholder="0" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;">
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:0.78rem;">Atual</label>
+          <input type="number" id="manual-atual" step="0.001" min="0" placeholder="0" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;">
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="lancarContagemManual()" style="width:100%;">✅ Lançar</button>
+    </div>
+    <div id="manual-lista" style="font-size:0.82rem;color:#555;max-height:200px;overflow-y:auto;"></div>
+  </div>
   <div id="historico-lista"></div>
 </div>
 
@@ -570,7 +598,7 @@ function showTab(name, el) {
   document.getElementById('tab-' + name).classList.add('active');
   if (el) el.classList.add('active');
   if (name === 'estoque')   renderEstoque();
-  if (name === 'historico') renderHistorico();
+  if (name === 'historico') { renderHistorico(); preencherSelectManual(); }
   if (name === 'pedidos')   { carregarProdutos(true).then(() => { gerarPedidosGrupo('bebidas'); gerarPedidosGrupo('cozinha'); gerarPedidosGrupo('embalagens'); }); }
   if (name !== 'scanner')   stopScanner();
 }
@@ -1114,7 +1142,76 @@ function exportarRelatorioCopiar() {
 document.addEventListener('DOMContentLoaded', () => {
   const d = document.getElementById('rel-data');
   if (d) d.value = new Date().toISOString().slice(0,10);
+  const md = document.getElementById('manual-data');
+  if (md) md.value = new Date().toISOString().slice(0,10);
+  preencherSelectManual();
 });
+
+function preencherSelectManual() {
+  const sel = document.getElementById('manual-produto');
+  if (!sel) return;
+  const cats = ['Carnes','Frios','Hortifruti','Alimentos','Outros','Temperos','Higiene'];
+  const prods = Object.values(produtosCache)
+    .filter(p => cats.includes(p.categoria))
+    .sort((a,b) => a.nome.localeCompare(b.nome));
+  sel.innerHTML = '<option value="">— Selecionar —</option>' +
+    prods.map(p => `<option value="${p.codigo}" data-uni="${p.unidade}">${p.nome}</option>`).join('');
+}
+
+function lancarContagemManual() {
+  const data     = document.getElementById('manual-data').value;
+  const codSel   = document.getElementById('manual-produto').value;
+  const anterior = parseFloat(document.getElementById('manual-anterior').value) || 0;
+  const entrada  = parseFloat(document.getElementById('manual-entrada').value)  || 0;
+  const atual    = parseFloat(document.getElementById('manual-atual').value);
+
+  if (!data || !codSel || isNaN(atual)) { showToast('Preencha data, produto e estoque atual!', 'error'); return; }
+
+  const p = produtosCache[codSel];
+  if (!p) return;
+
+  const ts = data + 'T23:59:00';
+
+  // Lançar contagem
+  const movContagem = {
+    ts, codigo: codSel, nome: p.nome, tipo: 'contagem',
+    qtd: atual, unidade: p.unidade, colaborador: 'Manual',
+    estoqueAnterior: anterior, obs: 'Lançamento manual'
+  };
+  historicoLocal.unshift(movContagem);
+
+  // Lançar entrada se tiver
+  if (entrada > 0) {
+    const movEntrada = {
+      ts: data + 'T12:00:00', codigo: codSel, nome: p.nome, tipo: 'entrada',
+      qtd: entrada, unidade: p.unidade, colaborador: 'Manual', obs: 'Lançamento manual'
+    };
+    historicoLocal.push(movEntrada);
+  }
+
+  saveHistLocal();
+
+  // Limpar campos
+  document.getElementById('manual-anterior').value = '';
+  document.getElementById('manual-entrada').value  = '';
+  document.getElementById('manual-atual').value    = '';
+  document.getElementById('manual-produto').value  = '';
+
+  showToast(`✅ ${p.nome} lançado!`, 'success');
+
+  // Atualizar lista de lançados
+  renderManualLista(data);
+}
+
+function renderManualLista(data) {
+  const el = document.getElementById('manual-lista');
+  if (!el) return;
+  const itens = historicoLocal.filter(m => m.ts && m.ts.slice(0,10) === data && m.obs === 'Lançamento manual' && m.tipo === 'contagem');
+  if (!itens.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<b>Lançados hoje:</b><br>' + itens.map(m =>
+    `✅ ${m.nome}: ${m.qtd} ${m.unidade}`
+  ).join('<br>');
+}
 
 function renderHistorico() {
   const el = document.getElementById('historico-lista');
