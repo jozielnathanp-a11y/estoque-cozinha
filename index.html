@@ -1115,9 +1115,21 @@ function debugHist() {
   const hist = historicoLocal.filter(m => m.ts && m.ts.slice(0,10) === data);
   const el = document.getElementById('relatorio-contagem');
   if (!hist.length) { el.innerHTML = '<p style="color:red;">Nenhum registro em hist_local para ' + data + '</p>'; return; }
-  el.innerHTML = '<b>hist_local (' + data + '):</b><br>' + hist.map(m =>
-    `cod: ${m.codigo} | tipo: <b>${m.tipo}</b> | obs: ${m.obs} | qtd: ${m.qtd} ${m.unidade}`
-  ).join('<br>');
+
+  // Verificar quais códigos do hist batem com produtosCache
+  let matched = 0, unmatched = [];
+  hist.forEach(m => {
+    const cod = String(m.codigo);
+    if (produtosCache[cod] || produtosCache[m.codigo]) matched++;
+    else unmatched.push(cod + ' (' + m.nome + ')');
+  });
+
+  el.innerHTML = '<b>hist_local (' + data + '):</b> ' + hist.length + ' registros<br>' +
+    '<b style="color:green;">✅ Bateram: ' + matched + '</b><br>' +
+    (unmatched.length ? '<b style="color:red;">❌ Não bateram (' + unmatched.length + '):</b><br>' + unmatched.join('<br>') : '') +
+    '<br><br>' + hist.slice(0,5).map(m =>
+      `cod: ${m.codigo} | tipo: <b>${m.tipo}</b> | qtd: ${m.qtd} ${m.unidade}`
+    ).join('<br>');
 }
 
 function _getCatsSelecionadas() {
