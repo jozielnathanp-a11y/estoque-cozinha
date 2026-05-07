@@ -1109,7 +1109,7 @@ function renderLinhasPedido(itens) {
             <div style="font-size:0.78rem;color:#777;">Tem: <b style="color:${cor}">${atual} ${uni}</b> | Média: ${min} | Máx: ${max}</div>
           </div>
           <div style="background:${cor};color:#fff;border-radius:8px;padding:5px 10px;font-weight:700;font-size:0.88rem;white-space:nowrap;">
-            +${pedir} ${uni}
+            ${p.estoqueCx ? Math.ceil(pedir/parseFloat(p.estoqueCx))+' cx' : '+'+pedir+' '+uni}
           </div>
         </div>`;
     });
@@ -1163,7 +1163,7 @@ function gerarTodosGrupo(grupo) {
               ${min != null ? `| Média: ${min} | Máx: ${max ?? '—'}` : ''}
             </div>
           </div>
-          ${pedir !== null ? `<div style="font-size:0.78rem;background:${pedir > 0 ? cor : '#2e7d32'};color:#fff;border-radius:6px;padding:4px 8px;white-space:nowrap;">${pedir > 0 ? 'Pedir +'+pedir+' '+uni : '✅ OK'}</div>` : ''}
+          ${pedir !== null ? `<div style="font-size:0.78rem;background:${pedir > 0 ? cor : '#2e7d32'};color:#fff;border-radius:6px;padding:4px 8px;white-space:nowrap;">${pedir > 0 ? (p.estoqueCx ? 'Pedir '+Math.ceil(pedir/parseFloat(p.estoqueCx))+' cx' : 'Pedir +'+pedir+' '+uni) : '✅ OK'}</div>` : ''}
         </div>`;
     });
   }
