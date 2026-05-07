@@ -470,8 +470,10 @@ async function aplicarMinMax() {
   }
   for (const [cod, vals] of Object.entries(minmaxCache)) {
     if (produtosCache[cod]) {
-      produtosCache[cod].estoqueMin = vals.min;
-      produtosCache[cod].estoqueMax = vals.max;
+      produtosCache[cod].estoqueMin  = vals.min;
+      produtosCache[cod].estoqueMax  = vals.max;
+      if (vals.cx)    produtosCache[cod].estoqueCx   = vals.cx;
+      if (vals.cx_ok != null) produtosCache[cod].estoqueCxOk = vals.cx_ok;
     }
   }
 }
@@ -1202,9 +1204,17 @@ function exportarWhatsGrupoTodos(grupo) {
     const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
     const min   = p.estoqueMin != null ? parseFloat(p.estoqueMin) : null;
     const pedir = min != null ? +(min - atual).toFixed(3) : null;
-    if (pedir === null || pedir <= 0) return; // só os que precisam pedir
+    if (pedir === null || pedir <= 0) return;
     temPedido = true;
-    txt += `• ${p.nome}: *+${pedir} ${uni}*\n`;
+    // Lógica de caixa
+    const cx    = p.estoqueCx   ? parseFloat(p.estoqueCx)   : null;
+    const cx_ok = p.estoqueCxOk ? parseFloat(p.estoqueCxOk) : null;
+    if (cx && cx_ok !== null && pedir > cx_ok) {
+      const ncx = Math.ceil(pedir / cx);
+      txt += `• ${p.nome}: *${ncx} cx* (${ncx * cx} ${uni})\n`;
+    } else {
+      txt += `• ${p.nome}: *+${pedir} ${uni}*\n`;
+    }
   });
   if (!temPedido) { showToast('Nenhum produto abaixo da média!', 'info'); return; }
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
