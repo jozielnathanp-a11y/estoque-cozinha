@@ -289,6 +289,17 @@
         <label style="display:flex;align-items:center;gap:4px;background:#f5f5f5;padding:5px 10px;border-radius:20px;font-size:0.82rem;cursor:pointer;"><input type="checkbox" value="Outros"> 📋 Outros</label>
       </div>
     </div>
+    <!-- Filtro de Colunas -->
+    <div style="margin-bottom:10px;">
+      <div style="font-size:0.8rem;font-weight:700;color:#555;margin-bottom:6px;">📋 Colunas (máx. 3):</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;" id="filtro-colunas">
+        <label style="display:flex;align-items:center;gap:4px;background:#e3f2fd;padding:5px 10px;border-radius:20px;font-size:0.82rem;cursor:pointer;"><input type="checkbox" value="atual" checked onchange="limitarColunas(this)"> 📊 Contagem atual</label>
+        <label style="display:flex;align-items:center;gap:4px;background:#e8f5e9;padding:5px 10px;border-radius:20px;font-size:0.82rem;cursor:pointer;"><input type="checkbox" value="entrada" onchange="limitarColunas(this)"> 📥 Entrada</label>
+        <label style="display:flex;align-items:center;gap:4px;background:#fff3e0;padding:5px 10px;border-radius:20px;font-size:0.82rem;cursor:pointer;"><input type="checkbox" value="anterior" onchange="limitarColunas(this)"> 🕐 Contagem anterior</label>
+        <label style="display:flex;align-items:center;gap:4px;background:#fce4ec;padding:5px 10px;border-radius:20px;font-size:0.82rem;cursor:pointer;"><input type="checkbox" value="entrada_ant" onchange="limitarColunas(this)"> 📦 Entrada anterior</label>
+      </div>
+      <div id="aviso-colunas" style="font-size:0.75rem;color:#e65100;margin-top:4px;display:none;">⚠️ Máximo 3 colunas</div>
+    </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
       <button class="btn" onclick="exportarRelatorioWpp()" style="flex:1;background:#25d366;color:#fff;">📲 WhatsApp</button>
       <button class="btn" onclick="exportarRelatorioCopiar()" style="flex:1;">📋 Copiar</button>
@@ -1069,7 +1080,22 @@ function addHistoricoLocal(mov) {
 }
 
 // ── RELATÓRIO DE CONTAGEM ──
-function _getCatsSelecionadas() {
+function limitarColunas(cb) {
+  const checks = [...document.querySelectorAll('#filtro-colunas input')];
+  const marcados = checks.filter(c => c.checked);
+  const aviso = document.getElementById('aviso-colunas');
+  if (marcados.length > 3) {
+    cb.checked = false;
+    aviso.style.display = 'block';
+    setTimeout(() => aviso.style.display = 'none', 2000);
+  }
+}
+
+function _getColsSelecionadas() {
+  return [...document.querySelectorAll('#filtro-colunas input:checked')].map(c => c.value);
+}
+
+
   return [...document.querySelectorAll('#filtro-cats input:checked')].map(cb => cb.value);
 }
 
@@ -1106,6 +1132,7 @@ function gerarRelatorioContagem() {
   const data = dataEl.value || new Date().toISOString().slice(0,10);
   dataEl.value = data;
   const itens = _getProdutosCozinhaData(data);
+  const cols  = _getColsSelecionadas();
   const el = document.getElementById('relatorio-contagem');
   if (itens.length === 0) {
     el.innerHTML = '<p style="text-align:center;color:#888;padding:16px;">Nenhum produto encontrado.</p>';
@@ -1117,14 +1144,14 @@ function gerarRelatorioContagem() {
     const temSaida = p.saidas > 0;
     const semCont  = p.semContagem;
     const cor      = temSaida ? '#e65100' : semCont ? '#999' : '#1a237e';
-    const atualTxt = semCont ? '<span style="color:#999;">**</span>' : `<b style="color:#1a237e">${p.contagem} ${uni}</b>`;
     html += `<div style="background:#fff;border-left:4px solid ${cor};border-radius:6px;padding:9px 12px;margin:4px 0;">`;
     html += `<div style="font-weight:700;font-size:0.9rem;">${temSaida ? '⚠️ ' : ''}${p.nome}</div>`;
-    html += `<div style="font-size:0.78rem;color:#555;margin-top:3px;">`;
-    if (p.anterior !== null) html += `Ant: <b>${p.anterior} ${uni}</b> &nbsp;|&nbsp;`;
-    if (p.entradas > 0)      html += `Entrada: <b style="color:#2e7d32">+${p.entradas} ${uni}</b> &nbsp;|&nbsp;`;
-    if (temSaida)            html += `<span style="color:#e65100">Saída: <b>-${p.saidas} ${uni}</b></span> &nbsp;|&nbsp;`;
-    html += `Atual: ${atualTxt}`;
+    html += `<div style="font-size:0.78rem;color:#555;margin-top:3px;display:flex;flex-wrap:wrap;gap:8px;">`;
+    if (cols.includes('anterior'))   html += `<span>🕐 Ant: <b>${p.anterior ?? '—'} ${uni}</b></span>`;
+    if (cols.includes('entrada_ant'))html += `<span>📦 Ent.ant: <b>${p.entradas_ant > 0 ? '+'+p.entradas_ant : '—'} ${uni}</b></span>`;
+    if (cols.includes('entrada'))    html += `<span>📥 Entrada: <b style="color:#2e7d32">${p.entradas > 0 ? '+'+p.entradas : '—'} ${uni}</b></span>`;
+    if (cols.includes('atual'))      html += `<span>📊 Atual: <b style="color:${cor}">${semCont ? '**' : p.contagem+' '+uni}</b></span>`;
+    if (temSaida)                    html += `<span style="color:#e65100">⚠️ Saída: <b>-${p.saidas} ${uni}</b></span>`;
     html += `</div></div>`;
   });
   el.innerHTML = html;
@@ -1138,6 +1165,7 @@ function _textoRelatorio() {
   const itens = _getProdutosCozinhaData(data);
   if (itens.length === 0) return null;
 
+  const cols = _getColsSelecionadas();
   let txt = `🍖 *CONTAGEM COZINHA — ${dataFmt}*\n${'─'.repeat(30)}\n\n`;
   itens.forEach(p => {
     const uni = p.unidade === 'kg' ? 'kg' : p.unidade;
@@ -1145,10 +1173,11 @@ function _textoRelatorio() {
     let linha = temSaida ? '⚠️ ' : '';
     linha += `*${p.nome}*\n`;
     let detalhes = [];
-    if (p.anterior !== null) detalhes.push(`ant: ${p.anterior} ${uni}`);
-    if (p.entradas > 0)      detalhes.push(`entrada: +${p.entradas} ${uni}`);
-    if (temSaida)            detalhes.push(`⚠️ saída: -${p.saidas} ${uni}`);
-    detalhes.push(`atual: *${p.semContagem ? '**' : p.contagem + ' ' + uni}*`);
+    if (cols.includes('anterior'))    detalhes.push(`ant: ${p.anterior ?? '—'} ${uni}`);
+    if (cols.includes('entrada_ant')) detalhes.push(`ent.ant: ${p.entradas_ant > 0 ? '+'+p.entradas_ant : '—'} ${uni}`);
+    if (cols.includes('entrada'))     detalhes.push(`entrada: ${p.entradas > 0 ? '+'+p.entradas : '—'} ${uni}`);
+    if (cols.includes('atual'))       detalhes.push(`atual: *${p.semContagem ? '**' : p.contagem+' '+uni}*`);
+    if (temSaida)                     detalhes.push(`⚠️ saída: -${p.saidas} ${uni}`);
     linha += detalhes.join(' | ') + '\n';
     txt += linha + '\n';
   });
