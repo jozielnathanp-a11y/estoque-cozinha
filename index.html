@@ -1126,29 +1126,39 @@ function _getCatsSelecionadas() {
 
 function _getProdutosCozinhaData(data) {
   const cats = _getCatsSelecionadas();
-  const dtFiltro = (ts) => { const d = new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
-  const hist = historicoLocal.filter(m => m.ts && dtFiltro(m.ts) === data);
+  const hoje = new Date().toISOString().slice(0,10);
+  const eHoje = data === hoje;
 
-  // Começa com TODOS os produtos das categorias selecionadas
+  // Todos os produtos das categorias selecionadas
   const porProduto = {};
   Object.values(produtosCache).forEach(p => {
     if (!cats.includes(p.categoria)) return;
-    porProduto[p.codigo] = { nome: p.nome, unidade: p.unidade, anterior: null, entradas: 0, saidas: 0, contagem: null, semContagem: true };
+    const est = parseFloat(p.estoque) || 0;
+    porProduto[p.codigo] = {
+      nome: p.nome, unidade: p.unidade,
+      anterior: null, entradas: 0, saidas: 0,
+      // Se for hoje, usa estoque atual do sistema como contagem
+      contagem: eHoje ? est : null,
+      semContagem: !eHoje
+    };
   });
 
-  // Sobrepõe com dados do histórico do dia
+  // Complementar com hist_local: entradas, saídas e contagens de dias anteriores
+  const dtFn = ts => { const d = new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+  const hist = historicoLocal.filter(m => m.ts && dtFn(m.ts) === data);
+
   hist.forEach(m => {
-    const cod = String(m.codigo);
-    if (!porProduto[cod] && !porProduto[m.codigo]) return;
-    const key = porProduto[cod] ? cod : m.codigo;
-    if (m.tipo === 'contagem' || (m.obs && m.obs.toLowerCase().includes('contagem'))) {
-      if (porProduto[key].anterior === null) porProduto[key].anterior = m.estoqueAnterior ?? 0;
-      porProduto[key].contagem = (porProduto[key].contagem ?? 0) + m.qtd;
-      porProduto[key].semContagem = false;
-    } else if (m.tipo === 'entrada') {
+    const key = porProduto[String(m.codigo)] ? String(m.codigo) : m.codigo;
+    if (!porProduto[key]) return;
+    if (m.tipo === 'entrada') {
       porProduto[key].entradas += m.qtd;
     } else if (m.tipo === 'saida') {
       porProduto[key].saidas += m.qtd;
+    } else if (!eHoje && (m.tipo === 'contagem' || (m.obs && m.obs.toLowerCase().includes('contagem')))) {
+      // Para dias anteriores usa o hist_local
+      if (porProduto[key].anterior === null) porProduto[key].anterior = m.estoqueAnterior ?? 0;
+      porProduto[key].contagem = (porProduto[key].contagem ?? 0) + m.qtd;
+      porProduto[key].semContagem = false;
     }
   });
 
