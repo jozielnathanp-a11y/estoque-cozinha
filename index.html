@@ -460,6 +460,22 @@ async function sheetWrite(params) {
 // ── CARREGAR PRODUTOS DO GITHUB JSON ──
 const PRODUTOS_URL = 'https://raw.githubusercontent.com/jozielnathanp-a11y/estoque-cozinha/main/produtos.json';
 
+let minmaxCache = null;
+async function aplicarMinMax() {
+  if (!minmaxCache) {
+    try {
+      const r = await fetch('minmax.json?t=' + Date.now());
+      minmaxCache = await r.json();
+    } catch(e) { minmaxCache = {}; }
+  }
+  for (const [cod, vals] of Object.entries(minmaxCache)) {
+    if (produtosCache[cod]) {
+      produtosCache[cod].estoqueMin = vals.min;
+      produtosCache[cod].estoqueMax = vals.max;
+    }
+  }
+}
+
 async function carregarProdutos(forcar = false) {
   setSyncStatus('⏳ Sincronizando...');
   const cached = localStorage.getItem('produtos_sheets');
@@ -469,6 +485,7 @@ async function carregarProdutos(forcar = false) {
   // Usar cache por até 2 minutos (exceto se forcar)
   if (!forcar && cached && (agora - ts) < 2 * 60 * 1000) {
     produtosCache = JSON.parse(cached);
+    await aplicarMinMax();
     setSyncStatus('✅ ' + Object.keys(produtosCache).length + ' produtos');
     renderEstoque();
     return;
@@ -479,7 +496,8 @@ async function carregarProdutos(forcar = false) {
     if (resp.ok) {
       const data = await resp.json();
       produtosCache = data;
-      localStorage.setItem('produtos_sheets', JSON.stringify(data));
+      await aplicarMinMax();
+      localStorage.setItem('produtos_sheets', JSON.stringify(produtosCache));
       localStorage.setItem('produtos_sheets_ts', String(Date.now()));
       setSyncStatus('✅ ' + Object.keys(produtosCache).length + ' produtos');
       if (forcar) showToast('✅ ' + Object.keys(produtosCache).length + ' produtos carregados!', 'success');
@@ -487,6 +505,7 @@ async function carregarProdutos(forcar = false) {
   } catch(e) {
     if (cached) {
       produtosCache = JSON.parse(cached);
+      await aplicarMinMax();
       setSyncStatus('⚠️ Offline — cache');
       if (forcar) showToast('⚠️ Sem conexão — usando cache', 'error');
     } else {
