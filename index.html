@@ -1042,19 +1042,23 @@ function renderEstoque() {
 // ── PEDIDOS ──
 // Categorias por grupo
 const GRUPOS_PEDIDO = {
-  bebidas:    ['Bebidas'],  // inclui Halls, Trident, Bala, Trufas (categoria Bebidas)
+  bebidas:    ['Bebidas'],  // inclui Halls, Trident, Bala (categoria Bebidas), exceto Trufas
   cozinha:    ['Carnes', 'Frios', 'Hortifruti', 'Alimentos', 'Outros', 'Temperos', 'Higiene'],
   embalagens: ['Embalagens', 'Limpeza']
 };
+const TRUFAS_COD = ['7890010300190']; // Trufas ficam na cozinha
 const TITULOS_GRUPO = { bebidas: '🥤 Bebidas', cozinha: '🍖 Cozinha', embalagens: '📦 Embalagens' };
 
 function filtrarGrupo(grupo) {
   const cats = GRUPOS_PEDIDO[grupo] || [];
-  return Object.values(produtosCache).filter(p =>
-    p.estoqueMin != null &&
-    parseFloat(p.estoque) < parseFloat(p.estoqueMin) &&
-    cats.includes(p.categoria)
-  );
+  return Object.values(produtosCache).filter(p => {
+    if (!cats.includes(p.categoria)) return false;
+    if (p.estoqueMin == null || parseFloat(p.estoque) >= parseFloat(p.estoqueMin)) return false;
+    // Trufas: excluir de bebidas, incluir em cozinha
+    if (grupo === 'bebidas' && TRUFAS_COD.includes(p.codigo)) return false;
+    if (grupo === 'cozinha' && TRUFAS_COD.includes(p.codigo)) return true;
+    return true;
+  });
 }
 
 function renderLinhasPedido(itens) {
@@ -1104,7 +1108,12 @@ function switchBebTab(aba) {
 
 function gerarTodosGrupo(grupo) {
   const cats = GRUPOS_PEDIDO[grupo] || [];
-  const itens = Object.values(produtosCache).filter(p => cats.includes(p.categoria));
+  const itens = Object.values(produtosCache).filter(p => {
+    if (!cats.includes(p.categoria)) return false;
+    if (grupo === 'bebidas' && TRUFAS_COD.includes(p.codigo)) return false;
+    if (grupo === 'cozinha' && TRUFAS_COD.includes(p.codigo)) return true;
+    return true;
+  });
   const el = document.getElementById('todos-' + grupo);
   if (itens.length === 0) { el.innerHTML = '<p style="text-align:center;color:#888;padding:16px;">Nenhum produto cadastrado.</p>'; return; }
 
