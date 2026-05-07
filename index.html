@@ -1026,57 +1026,35 @@ function addHistoricoLocal(mov) {
 }
 
 // ── RELATÓRIO DE CONTAGEM ──
+function _getProdutosCozinhaData(data) {
+  const cats = ['Carnes','Frios','Hortifruti','Alimentos','Outros','Temperos','Higiene'];
+  const hist = historicoLocal.filter(m => m.ts && m.ts.slice(0,10) === data && m.tipo === 'contagem');
+  const porProduto = {};
+  hist.forEach(m => {
+    if (!cats.includes((produtosCache[m.codigo]||{}).categoria)) return;
+    porProduto[m.codigo] = { nome: m.nome, unidade: m.unidade, contagem: m.qtd };
+  });
+  return Object.values(porProduto).sort((a,b) => a.nome.localeCompare(b.nome));
+}
+
 function gerarRelatorioContagem() {
   const dataEl = document.getElementById('rel-data');
   const data = dataEl.value || new Date().toISOString().slice(0,10);
   dataEl.value = data;
-
-  // Filtrar histórico do dia selecionado
-  const hist = historicoLocal.filter(m => m.ts && m.ts.slice(0,10) === data);
-  const cats = ['Carnes','Frios','Hortifruti','Alimentos','Outros','Temperos','Higiene'];
-  
-  // Agrupar por produto
-  const porProduto = {};
-  hist.forEach(m => {
-    if (!cats.includes((produtosCache[m.codigo]||{}).categoria)) return;
-    if (!porProduto[m.codigo]) porProduto[m.codigo] = { nome: m.nome, unidade: m.unidade, anterior: null, entradas: 0, contagem: null };
-    if (m.tipo === 'contagem') {
-      // estoqueAnterior salvo no momento do lançamento
-      if (porProduto[m.codigo].anterior === null) porProduto[m.codigo].anterior = m.estoqueAnterior ?? 0;
-      porProduto[m.codigo].contagem = m.qtd;
-    } else if (m.tipo === 'entrada') {
-      porProduto[m.codigo].entradas += m.qtd;
-    }
-  });
-
+  const itens = _getProdutosCozinhaData(data);
   const el = document.getElementById('relatorio-contagem');
-  const itens = Object.values(porProduto);
   if (itens.length === 0) {
-    el.innerHTML = '<p style="text-align:center;color:#888;padding:16px;">Nenhum lançamento encontrado para esta data.</p>';
+    el.innerHTML = '<p style="text-align:center;color:#888;padding:16px;">Nenhuma contagem encontrada para esta data.</p>';
     return;
   }
-
-  let html = '';
-  itens.sort((a,b) => a.nome.localeCompare(b.nome)).forEach(p => {
-    const ant  = p.anterior ?? 0;
-    const ent  = p.entradas;
-    const con  = p.contagem ?? 0;
-    const cons = +(ant + ent - con).toFixed(3);
-    const uni  = p.unidade === 'kg' ? 'kg' : p.unidade;
-    const cor  = cons < 0 ? '#c62828' : '#1a237e';
-    html += `
-      <div style="background:#fff;border-left:4px solid ${cor};border-radius:6px;padding:9px 12px;margin:4px 0;">
-        <div style="font-weight:600;font-size:0.9rem;">${p.nome}</div>
-        <div style="font-size:0.78rem;color:#555;margin-top:2px;">
-          Anterior: <b>${ant} ${uni}</b> &nbsp;|&nbsp;
-          Entrada: <b style="color:#2e7d32">+${ent} ${uni}</b> &nbsp;|&nbsp;
-          Atual: <b>${con} ${uni}</b>
-        </div>
-        <div style="font-size:0.82rem;font-weight:700;color:${cor};margin-top:3px;">
-          Consumo: ${cons} ${uni}
-        </div>
-      </div>`;
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:0.88rem;">';
+  html += '<tr style="background:#b71c1c;color:#fff;"><th style="padding:7px;text-align:left;">Produto</th><th style="padding:7px;text-align:right;">Estoque</th></tr>';
+  itens.forEach((p, i) => {
+    const uni = p.unidade === 'kg' ? 'kg' : p.unidade;
+    const bg = i % 2 === 0 ? '#fff' : '#f9f9f9';
+    html += `<tr style="background:${bg};"><td style="padding:7px;">${p.nome}</td><td style="padding:7px;text-align:right;font-weight:700;">${p.contagem} ${uni}</td></tr>`;
   });
+  html += '</table>';
   el.innerHTML = html;
 }
 
@@ -1085,53 +1063,34 @@ function _textoRelatorio() {
   const data = dataEl.value || new Date().toISOString().slice(0,10);
   const [ano,mes,dia] = data.split('-');
   const dataFmt = `${dia}/${mes}/${ano}`;
-
-  const hist = historicoLocal.filter(m => m.ts && m.ts.slice(0,10) === data);
-  const cats = ['Carnes','Frios','Hortifruti','Alimentos','Outros','Temperos','Higiene'];
-  const porProduto = {};
-  hist.forEach(m => {
-    if (!cats.includes((produtosCache[m.codigo]||{}).categoria)) return;
-    if (!porProduto[m.codigo]) porProduto[m.codigo] = { nome: m.nome, unidade: m.unidade, anterior: null, entradas: 0, contagem: null };
-    if (m.tipo === 'contagem') {
-      if (porProduto[m.codigo].anterior === null) porProduto[m.codigo].anterior = m.estoqueAnterior ?? 0;
-      porProduto[m.codigo].contagem = m.qtd;
-    } else if (m.tipo === 'entrada') {
-      porProduto[m.codigo].entradas += m.qtd;
-    }
-  });
-
-  const itens = Object.values(porProduto);
+  const itens = _getProdutosCozinhaData(data);
   if (itens.length === 0) return null;
-
-  let txt = `🍖 *CONTAGEM COZINHA — ${dataFmt}*\n${'─'.repeat(30)}\n\n`;
-  itens.sort((a,b) => a.nome.localeCompare(b.nome)).forEach(p => {
-    const ant  = p.anterior ?? 0;
-    const ent  = p.entradas;
-    const con  = p.contagem ?? 0;
-    const cons = +(ant + ent - con).toFixed(3);
-    const uni  = p.unidade === 'kg' ? 'kg' : p.unidade;
-    txt += `*${p.nome}*\n`;
-    txt += `  Anterior: ${ant} ${uni} | Entrada: +${ent} ${uni} | Atual: ${con} ${uni}\n`;
-    txt += `  ➡️ Consumo: *${cons} ${uni}*\n\n`;
+  let txt = `🍖 *CONTAGEM COZINHA — ${dataFmt}*\n\n`;
+  // Cabeçalho formatado como tabela
+  txt += `*Produto* | *Estoque*\n`;
+  txt += `${'─'.repeat(28)}\n`;
+  itens.forEach(p => {
+    const uni = p.unidade === 'kg' ? 'kg' : p.unidade;
+    const nome = p.nome.padEnd(22, ' ');
+    txt += `${p.nome}: *${p.contagem} ${uni}*\n`;
   });
   return txt;
 }
 
 function exportarRelatorioWpp() {
   const txt = _textoRelatorio();
-  if (!txt) { showToast('Nenhum dado para esta data!', 'info'); return; }
+  if (!txt) { showToast('Nenhuma contagem para esta data!', 'info'); return; }
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
 }
 
 function exportarRelatorioCopiar() {
   const txt = _textoRelatorio();
-  if (!txt) { showToast('Nenhum dado para esta data!', 'info'); return; }
+  if (!txt) { showToast('Nenhuma contagem para esta data!', 'info'); return; }
   navigator.clipboard.writeText(txt)
     .then(() => showToast('📋 Copiado!', 'success'))
     .catch(() => { const el = document.createElement('textarea'); el.value = txt; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); showToast('📋 Copiado!', 'success'); });
 }
 
-// Preencher data de hoje ao abrir
 document.addEventListener('DOMContentLoaded', () => {
   const d = document.getElementById('rel-data');
   if (d) d.value = new Date().toISOString().slice(0,10);
