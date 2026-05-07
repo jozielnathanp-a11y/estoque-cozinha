@@ -1097,7 +1097,7 @@ function renderLinhasPedido(itens) {
       const atual = parseFloat(p.estoque) || 0;
       const min   = parseFloat(p.estoqueMin);
       const max   = parseFloat(p.estoqueMax || min * 2);
-      const pedir = +(max - atual).toFixed(3);
+      const pedir = +(min - atual).toFixed(3);
       const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
       const cor   = atual === 0 ? '#c62828' : '#e65100';
       html += `
@@ -1151,7 +1151,7 @@ function gerarTodosGrupo(grupo) {
       const baixo = min != null && atual < min;
       const cor   = baixo ? (atual === 0 ? '#c62828' : '#e65100') : '#2e7d32';
       const status = baixo ? (atual === 0 ? '🔴' : '🟠') : '🟢';
-      const pedir = max != null ? +(max - atual).toFixed(3) : null;
+      const pedir = min != null ? +(min - atual).toFixed(3) : null;
       html += `
         <div style="background:#fff;border-left:4px solid ${cor};border-radius:6px;padding:9px 12px;margin:4px 0;display:flex;justify-content:space-between;align-items:center;">
           <div>
@@ -1179,7 +1179,7 @@ function exportarTxtGrupoTodos(grupo) {
     const atual = parseFloat(p.estoque) || 0;
     const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
     const max   = p.estoqueMax != null ? parseFloat(p.estoqueMax) : null;
-    const pedir = max != null ? +(max - atual).toFixed(3) : '—';
+    const pedir = min != null ? +(min - atual).toFixed(3) : '—';
     const baixo = p.estoqueMin != null && atual < parseFloat(p.estoqueMin);
     const alerta = baixo ? ' ⚠️' : '';
     txt += `• ${p.nome}: tem ${atual} ${uni} → pedir ${pedir > 0 ? '+'+pedir : pedir} ${uni}${alerta}\n`;
@@ -1200,7 +1200,7 @@ function exportarWhatsGrupoTodos(grupo) {
     const atual = parseFloat(p.estoque) || 0;
     const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
     const max   = p.estoqueMax != null ? parseFloat(p.estoqueMax) : null;
-    const pedir = max != null ? +(max - atual).toFixed(3) : null;
+    const pedir = min != null ? +(min - atual).toFixed(3) : null;
     const baixo = p.estoqueMin != null && atual < parseFloat(p.estoqueMin);
     const status = baixo ? (atual === 0 ? '🔴' : '🟠') : '🟢';
     const pedirTxt = pedir !== null ? ` → pedir *${pedir > 0 ? '+'+pedir : pedir} ${uni}*` : '';
@@ -1223,7 +1223,7 @@ function exportarTxtGrupo(grupo) {
   itens.forEach(p => {
     const atual = parseFloat(p.estoque) || 0;
     const max   = parseFloat(p.estoqueMax || p.estoqueMin * 2);
-    const pedir = +(max - atual).toFixed(3);
+    const pedir = +(min - atual).toFixed(3);
     const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
     txt += `• ${p.nome}: pedir ${pedir} ${uni} (tem ${atual} ${uni})\n`;
   });
@@ -1245,7 +1245,7 @@ function exportarWhatsGrupo(grupo) {
     ps.forEach(p => {
       const atual = parseFloat(p.estoque) || 0;
       const max   = parseFloat(p.estoqueMax || p.estoqueMin * 2);
-      const pedir = +(max - atual).toFixed(3);
+      const pedir = +(min - atual).toFixed(3);
       const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
       txt += `• ${p.nome}: pedir *${pedir} ${uni}* (tem ${atual} ${uni})\n`;
     });
