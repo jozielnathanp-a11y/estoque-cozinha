@@ -1138,7 +1138,8 @@ function _getCatsSelecionadas() {
 
 function _getProdutosCozinhaData(data) {
   const cats = _getCatsSelecionadas();
-  const hist = historicoLocal.filter(m => m.ts && m.ts.slice(0,10) === data);
+  const dtFiltro = (ts) => { const d = new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+  const hist = historicoLocal.filter(m => m.ts && dtFiltro(m.ts) === data);
 
   // Começa com TODOS os produtos das categorias selecionadas
   const porProduto = {};
@@ -1153,8 +1154,6 @@ function _getProdutosCozinhaData(data) {
     if (!porProduto[cod] && !porProduto[m.codigo]) return;
     const key = porProduto[cod] ? cod : m.codigo;
     if (m.tipo === 'contagem' || (m.obs && m.obs.toLowerCase().includes('contagem'))) {
-      // Ignorar registros de injeção automática com qtd 0
-      if (m.colaborador === 'Manual' && m.qtd === 0) return;
       if (porProduto[key].anterior === null) porProduto[key].anterior = m.estoqueAnterior ?? 0;
       // Somar contagens do mesmo produto no mesmo dia
       porProduto[key].contagem = (porProduto[key].contagem ?? 0) + m.qtd;
