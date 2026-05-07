@@ -1099,6 +1099,7 @@ function _getColsSelecionadas() {
 
 
 function debugHist() {
+  historicoLocal = JSON.parse(localStorage.getItem('hist_local') || '[]');
   const data = document.getElementById('rel-data').value || new Date().toISOString().slice(0,10);
   const hist = historicoLocal.filter(m => m.ts && m.ts.slice(0,10) === data);
   const el = document.getElementById('relatorio-contagem');
@@ -1143,6 +1144,8 @@ function _getProdutosCozinhaData(data) {
 }
 
 function gerarRelatorioContagem() {
+  // Reler hist_local sempre fresquinho (pode ter sido atualizado pelo operador)
+  historicoLocal = JSON.parse(localStorage.getItem('hist_local') || '[]');
   const dataEl = document.getElementById('rel-data');
   const data = dataEl.value || new Date().toISOString().slice(0,10);
   dataEl.value = data;
