@@ -274,6 +274,7 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
       <input type="date" id="rel-data" style="flex:1;padding:8px;border-radius:6px;border:1px solid #ddd;font-size:0.9rem;">
       <button class="btn btn-green" onclick="gerarRelatorioContagem()" style="flex:1;">📊 Gerar</button>
+    <button class="btn" onclick="debugHist()" style="flex:1;background:#9c27b0;color:#fff;">🔍 Debug</button>
     </div>
     <!-- Filtro de Categorias -->
     <div style="margin-bottom:10px;">
@@ -1097,7 +1098,17 @@ function _getColsSelecionadas() {
 }
 
 
-function _getCatsSelecionadas() {
+function debugHist() {
+  const data = document.getElementById('rel-data').value || new Date().toISOString().slice(0,10);
+  const hist = historicoLocal.filter(m => m.ts && m.ts.slice(0,10) === data);
+  const el = document.getElementById('relatorio-contagem');
+  if (!hist.length) { el.innerHTML = '<p style="color:red;">Nenhum registro em hist_local para ' + data + '</p>'; return; }
+  el.innerHTML = '<b>hist_local (' + data + '):</b><br>' + hist.map(m =>
+    `cod: ${m.codigo} | tipo: <b>${m.tipo}</b> | obs: ${m.obs} | qtd: ${m.qtd} ${m.unidade}`
+  ).join('<br>');
+}
+
+
   return [...document.querySelectorAll('#filtro-cats input:checked')].map(cb => cb.value);
 }
 
@@ -1114,15 +1125,17 @@ function _getProdutosCozinhaData(data) {
 
   // Sobrepõe com dados do histórico do dia
   hist.forEach(m => {
-    if (!porProduto[m.codigo]) return;
+    const cod = String(m.codigo);
+    if (!porProduto[cod] && !porProduto[m.codigo]) return;
+    const key = porProduto[cod] ? cod : m.codigo;
     if (m.tipo === 'contagem' || (m.obs && m.obs.toLowerCase().includes('contagem'))) {
-      if (porProduto[m.codigo].anterior === null) porProduto[m.codigo].anterior = m.estoqueAnterior ?? 0;
-      porProduto[m.codigo].contagem = m.qtd;
-      porProduto[m.codigo].semContagem = false;
+      if (porProduto[key].anterior === null) porProduto[key].anterior = m.estoqueAnterior ?? 0;
+      porProduto[key].contagem = m.qtd;
+      porProduto[key].semContagem = false;
     } else if (m.tipo === 'entrada') {
-      porProduto[m.codigo].entradas += m.qtd;
+      porProduto[key].entradas += m.qtd;
     } else if (m.tipo === 'saida') {
-      porProduto[m.codigo].saidas += m.qtd;
+      porProduto[key].saidas += m.qtd;
     }
   });
 
