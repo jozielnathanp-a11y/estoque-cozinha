@@ -1196,16 +1196,17 @@ function exportarWhatsGrupoTodos(grupo) {
   const hoje = new Date().toLocaleDateString('pt-BR');
   const titulo = TITULOS_GRUPO[grupo];
   let txt = `*${titulo} — PEDIDO ${hoje}*\n\n`;
+  let temPedido = false;
   itens.sort((a,b) => a.nome.localeCompare(b.nome)).forEach(p => {
     const atual = parseFloat(p.estoque) || 0;
     const uni   = p.unidade === 'kg' || p.unidade === 'g' ? 'kg' : p.unidade;
-    const max   = p.estoqueMax != null ? parseFloat(p.estoqueMax) : null;
+    const min   = p.estoqueMin != null ? parseFloat(p.estoqueMin) : null;
     const pedir = min != null ? +(min - atual).toFixed(3) : null;
-    const baixo = p.estoqueMin != null && atual < parseFloat(p.estoqueMin);
-    const status = baixo ? (atual === 0 ? '🔴' : '🟠') : '🟢';
-    const pedirTxt = pedir !== null ? ` → pedir *${pedir > 0 ? '+'+pedir : pedir} ${uni}*` : '';
-    txt += `${status} ${p.nome}: *${atual} ${uni}*${pedirTxt}\n`;
+    if (pedir === null || pedir <= 0) return; // só os que precisam pedir
+    temPedido = true;
+    txt += `• ${p.nome}: *+${pedir} ${uni}*\n`;
   });
+  if (!temPedido) { showToast('Nenhum produto abaixo da média!', 'info'); return; }
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
 }
 
