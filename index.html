@@ -1114,7 +1114,7 @@ function _getProdutosCozinhaData(data) {
   // Sobrepõe com dados do histórico do dia
   hist.forEach(m => {
     if (!porProduto[m.codigo]) return;
-    if (m.tipo === 'contagem') {
+    if (m.tipo === 'contagem' || (m.obs && m.obs.toLowerCase().includes('contagem'))) {
       if (porProduto[m.codigo].anterior === null) porProduto[m.codigo].anterior = m.estoqueAnterior ?? 0;
       porProduto[m.codigo].contagem = m.qtd;
       porProduto[m.codigo].semContagem = false;
