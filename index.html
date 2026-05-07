@@ -1142,7 +1142,7 @@ function gerarTodosGrupo(grupo) {
               ${min != null ? `| Mín: ${min} | Máx: ${max ?? '—'}` : ''}
             </div>
           </div>
-          ${pedir !== null ? `<div style="font-size:0.78rem;background:${cor};color:#fff;border-radius:6px;padding:4px 8px;white-space:nowrap;">${pedir > 0 ? '+'+pedir : pedir} ${uni}</div>` : ''}
+          ${pedir !== null ? `<div style="font-size:0.78rem;background:${pedir > 0 ? cor : '#2e7d32'};color:#fff;border-radius:6px;padding:4px 8px;white-space:nowrap;">${pedir > 0 ? 'Pedir +'+pedir+' '+uni : '✅ OK'}</div>` : ''}
         </div>`;
     });
   }
