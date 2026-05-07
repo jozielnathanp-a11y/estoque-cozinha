@@ -1028,11 +1028,19 @@ function addHistoricoLocal(mov) {
 // ── RELATÓRIO DE CONTAGEM ──
 function _getProdutosCozinhaData(data) {
   const cats = ['Carnes','Frios','Hortifruti','Alimentos','Outros','Temperos','Higiene'];
-  const hist = historicoLocal.filter(m => m.ts && m.ts.slice(0,10) === data && m.tipo === 'contagem');
+  const hist = historicoLocal.filter(m => m.ts && m.ts.slice(0,10) === data);
   const porProduto = {};
   hist.forEach(m => {
     if (!cats.includes((produtosCache[m.codigo]||{}).categoria)) return;
-    porProduto[m.codigo] = { nome: m.nome, unidade: m.unidade, contagem: m.qtd };
+    if (!porProduto[m.codigo]) porProduto[m.codigo] = { nome: m.nome, unidade: m.unidade, anterior: null, entradas: 0, saidas: 0, contagem: null };
+    if (m.tipo === 'contagem') {
+      if (porProduto[m.codigo].anterior === null) porProduto[m.codigo].anterior = m.estoqueAnterior ?? 0;
+      porProduto[m.codigo].contagem = m.qtd;
+    } else if (m.tipo === 'entrada') {
+      porProduto[m.codigo].entradas += m.qtd;
+    } else if (m.tipo === 'saida') {
+      porProduto[m.codigo].saidas += m.qtd;
+    }
   });
   return Object.values(porProduto).sort((a,b) => a.nome.localeCompare(b.nome));
 }
@@ -1047,14 +1055,20 @@ function gerarRelatorioContagem() {
     el.innerHTML = '<p style="text-align:center;color:#888;padding:16px;">Nenhuma contagem encontrada para esta data.</p>';
     return;
   }
-  let html = '<table style="width:100%;border-collapse:collapse;font-size:0.88rem;">';
-  html += '<tr style="background:#b71c1c;color:#fff;"><th style="padding:7px;text-align:left;">Produto</th><th style="padding:7px;text-align:right;">Estoque</th></tr>';
-  itens.forEach((p, i) => {
-    const uni = p.unidade === 'kg' ? 'kg' : p.unidade;
-    const bg = i % 2 === 0 ? '#fff' : '#f9f9f9';
-    html += `<tr style="background:${bg};"><td style="padding:7px;">${p.nome}</td><td style="padding:7px;text-align:right;font-weight:700;">${p.contagem} ${uni}</td></tr>`;
+  let html = '';
+  itens.forEach(p => {
+    const uni  = p.unidade === 'kg' ? 'kg' : p.unidade;
+    const temSaida = p.saidas > 0;
+    const cor  = temSaida ? '#e65100' : '#1a237e';
+    html += `<div style="background:#fff;border-left:4px solid ${cor};border-radius:6px;padding:9px 12px;margin:4px 0;">`;
+    html += `<div style="font-weight:700;font-size:0.9rem;">${temSaida ? '⚠️ ' : ''}${p.nome}</div>`;
+    html += `<div style="font-size:0.78rem;color:#555;margin-top:3px;">`;
+    if (p.anterior !== null) html += `Anterior: <b>${p.anterior} ${uni}</b> &nbsp;|&nbsp;`;
+    if (p.entradas > 0)      html += `Entrada: <b style="color:#2e7d32">+${p.entradas} ${uni}</b> &nbsp;|&nbsp;`;
+    if (temSaida)            html += `<span style="color:#e65100">Saída: <b>-${p.saidas} ${uni}</b></span> &nbsp;|&nbsp;`;
+    html += `Atual: <b style="color:#1a237e">${p.contagem ?? '—'} ${uni}</b>`;
+    html += `</div></div>`;
   });
-  html += '</table>';
   el.innerHTML = html;
 }
 
@@ -1065,14 +1079,20 @@ function _textoRelatorio() {
   const dataFmt = `${dia}/${mes}/${ano}`;
   const itens = _getProdutosCozinhaData(data);
   if (itens.length === 0) return null;
-  let txt = `🍖 *CONTAGEM COZINHA — ${dataFmt}*\n\n`;
-  // Cabeçalho formatado como tabela
-  txt += `*Produto* | *Estoque*\n`;
-  txt += `${'─'.repeat(28)}\n`;
+
+  let txt = `🍖 *CONTAGEM COZINHA — ${dataFmt}*\n${'─'.repeat(30)}\n\n`;
   itens.forEach(p => {
     const uni = p.unidade === 'kg' ? 'kg' : p.unidade;
-    const nome = p.nome.padEnd(22, ' ');
-    txt += `${p.nome}: *${p.contagem} ${uni}*\n`;
+    const temSaida = p.saidas > 0;
+    let linha = temSaida ? '⚠️ ' : '';
+    linha += `*${p.nome}*\n`;
+    let detalhes = [];
+    if (p.anterior !== null) detalhes.push(`anterior: ${p.anterior} ${uni}`);
+    if (p.entradas > 0)      detalhes.push(`entrada: +${p.entradas} ${uni}`);
+    if (temSaida)            detalhes.push(`⚠️ saída: -${p.saidas} ${uni}`);
+    detalhes.push(`atual: *${p.contagem ?? '—'} ${uni}*`);
+    linha += detalhes.join(' | ') + '\n';
+    txt += linha + '\n';
   });
   return txt;
 }
