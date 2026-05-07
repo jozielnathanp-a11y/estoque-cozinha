@@ -1142,7 +1142,8 @@ function _getProdutosCozinhaData(data) {
     const key = porProduto[cod] ? cod : m.codigo;
     if (m.tipo === 'contagem' || (m.obs && m.obs.toLowerCase().includes('contagem'))) {
       if (porProduto[key].anterior === null) porProduto[key].anterior = m.estoqueAnterior ?? 0;
-      porProduto[key].contagem = m.qtd;
+      // Somar contagens do mesmo produto no mesmo dia
+      porProduto[key].contagem = (porProduto[key].contagem ?? 0) + m.qtd;
       porProduto[key].semContagem = false;
     } else if (m.tipo === 'entrada') {
       porProduto[key].entradas += m.qtd;
