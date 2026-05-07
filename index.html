@@ -1206,14 +1206,13 @@ function exportarWhatsGrupoTodos(grupo) {
     const pedir = min != null ? +(min - atual).toFixed(3) : null;
     if (pedir === null || pedir <= 0) return;
     temPedido = true;
-    // Lógica de caixa
-    const cx    = p.estoqueCx   ? parseFloat(p.estoqueCx)   : null;
-    const cx_ok = p.estoqueCxOk ? parseFloat(p.estoqueCxOk) : null;
-    if (cx && cx_ok !== null && pedir > cx_ok) {
+    // Sempre arredondar para caixa fechada
+    const cx = p.estoqueCx ? parseFloat(p.estoqueCx) : null;
+    if (cx) {
       const ncx = Math.ceil(pedir / cx);
-      txt += `• ${p.nome}: *${ncx} cx* (${ncx * cx} ${uni})\n`;
+      txt += `• ${p.nome}: *${ncx} cx* (${ncx * cx} ${p.unidade === 'cx' ? 'cx' : p.unidade})\n`;
     } else {
-      txt += `• ${p.nome}: *+${pedir} ${uni}*\n`;
+      txt += `• ${p.nome}: *+${pedir} ${p.unidade}*\n`;
     }
   });
   if (!temPedido) { showToast('Nenhum produto abaixo da média!', 'info'); return; }
