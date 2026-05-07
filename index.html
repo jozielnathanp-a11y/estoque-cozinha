@@ -39,8 +39,9 @@
     .hist-item h4 { font-size: 0.88rem; font-weight: 700; }
     .hist-item small { display: block; font-size: 0.75rem; color: #888; margin-top: 2px; }
     .badge { font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
-    .badge-entrada { background: #e8f5e9; color: #2e7d32; }
-    .badge-saida   { background: #ffebee; color: #b71c1c; }
+    .badge-entrada  { background: #e8f5e9; color: #2e7d32; }
+    .badge-saida    { background: #ffebee; color: #b71c1c; }
+    .badge-contagem { background: #e3f2fd; color: #1565c0; }
     .empty { text-align: center; padding: 40px 20px; color: #aaa; }
     .empty span { display: block; font-size: 2.5rem; margin-bottom: 12px; }
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
@@ -1278,7 +1279,7 @@ function renderHistorico() {
   if (!historicoLocal.length) { el.innerHTML = '<div class="empty"><span>📋</span>Nenhuma movimentação ainda.</div>'; return; }
   el.innerHTML = historicoLocal.map(h => `
     <div class="hist-item">
-      <div class="top"><h4>${h.nome}</h4><span class="badge badge-${h.tipo}">${h.tipo === 'entrada' ? '📥 Entrada' : '📤 Saída'}</span></div>
+      <div class="top"><h4>${h.nome}</h4><span class="badge badge-${h.tipo === 'entrada' ? 'entrada' : h.tipo === 'contagem' ? 'entrada' : 'saida'}">${h.tipo === 'entrada' ? '📥 Entrada' : h.tipo === 'contagem' ? '🧮 Contagem' : '📤 Saída'}</span></div>
       <div style="font-size:0.88rem;font-weight:700;margin-top:3px;">${fmtQ(h.qtd, h.unidade)}</div>
       ${h.obs ? '<small>📝 ' + h.obs + '</small>' : ''}
       <small>🕐 ${fmtD(h.data)}</small>
