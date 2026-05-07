@@ -1104,7 +1104,7 @@ function renderLinhasPedido(itens) {
         <div style="background:#fff;border-left:4px solid ${cor};border-radius:6px;padding:10px 12px;margin:5px 0;display:flex;justify-content:space-between;align-items:center;">
           <div>
             <div style="font-weight:600;font-size:0.92rem;">${p.nome}</div>
-            <div style="font-size:0.78rem;color:#777;">Tem: <b style="color:${cor}">${atual} ${uni}</b> | Mín: ${min} | Máx: ${max}</div>
+            <div style="font-size:0.78rem;color:#777;">Tem: <b style="color:${cor}">${atual} ${uni}</b> | Média: ${min} | Máx: ${max}</div>
           </div>
           <div style="background:${cor};color:#fff;border-radius:8px;padding:5px 10px;font-weight:700;font-size:0.88rem;white-space:nowrap;">
             +${pedir} ${uni}
@@ -1158,7 +1158,7 @@ function gerarTodosGrupo(grupo) {
             <div style="font-weight:600;font-size:0.9rem;">${status} ${p.nome}</div>
             <div style="font-size:0.76rem;color:#777;">
               Estoque: <b style="color:${cor}">${atual} ${uni}</b>
-              ${min != null ? `| Mín: ${min} | Máx: ${max ?? '—'}` : ''}
+              ${min != null ? `| Média: ${min} | Máx: ${max ?? '—'}` : ''}
             </div>
           </div>
           ${pedir !== null ? `<div style="font-size:0.78rem;background:${pedir > 0 ? cor : '#2e7d32'};color:#fff;border-radius:6px;padding:4px 8px;white-space:nowrap;">${pedir > 0 ? 'Pedir +'+pedir+' '+uni : '✅ OK'}</div>` : ''}
