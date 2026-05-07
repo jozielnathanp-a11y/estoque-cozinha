@@ -1155,8 +1155,17 @@ function _getProdutosCozinhaData(data) {
     const key = porProduto[cod] ? cod : m.codigo;
     if (m.tipo === 'contagem' || (m.obs && m.obs.toLowerCase().includes('contagem'))) {
       if (porProduto[key].anterior === null) porProduto[key].anterior = m.estoqueAnterior ?? 0;
-      // Somar contagens do mesmo produto no mesmo dia
-      porProduto[key].contagem = (porProduto[key].contagem ?? 0) + m.qtd;
+      const isManual = m.colaborador === 'Manual';
+      // Lançamento real sempre substitui o manual
+      if (!porProduto[key].temReal && !isManual) {
+        porProduto[key].contagem = m.qtd;
+        porProduto[key].temReal = true;
+      } else if (!porProduto[key].temReal && isManual) {
+        porProduto[key].contagem = (porProduto[key].contagem ?? 0) + m.qtd;
+      } else if (porProduto[key].temReal && !isManual) {
+        porProduto[key].contagem = (porProduto[key].contagem ?? 0) + m.qtd;
+      }
+      // Se já tem real e vem manual, ignora
       porProduto[key].semContagem = false;
     } else if (m.tipo === 'entrada') {
       porProduto[key].entradas += m.qtd;
