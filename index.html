@@ -345,6 +345,7 @@
     <p style="font-size:0.83rem;color:#555;margin-bottom:10px;">Dados salvos no Google Sheets em tempo real.</p>
     <button class="btn btn-red" onclick="carregarProdutos(true)">🔄 Recarregar Produtos do Sheets</button>
     <button class="btn btn-red" onclick="zerarHistLocal()" style="margin-top:8px;background:#b71c1c;">🗑️ Limpar Histórico Local</button>
+    <button class="btn btn-red" onclick="zerarTodoEstoque()" style="margin-top:8px;background:#4a0000;">⚠️ Zerar Todo Estoque</button>
     <button class="btn btn-green" onclick="exportCSV()" style="margin-top:8px;">📊 Exportar CSV Histórico</button>
   </div>
   <div class="card">
@@ -1669,6 +1670,29 @@ function zerarHistLocal() {
   historicoLocal = [];
   showToast('✅ Histórico local zerado!', 'success');
   renderHistorico();
+}
+
+async function zerarTodoEstoque() {
+  if (!confirm('Zerar TODOS os estoques? Esta ação não pode ser desfeita!')) return;
+  const prods = Object.values(produtosCache).filter(p => parseFloat(p.estoque) > 0);
+  showToast('Zerando ' + prods.length + ' produtos...', 'info');
+  let ok = 0;
+  for (const p of prods) {
+    const p2 = { ...p, estoque: 0 };
+    const dados = encodeURIComponent(JSON.stringify(p2));
+    try {
+      await fetch(API + '?acao=salvarProduto&dados=' + dados, { method: 'GET', mode: 'no-cors' });
+      if (produtosCache[p.codigo]) produtosCache[p.codigo].estoque = 0;
+      ok++;
+    } catch(e) {}
+    await new Promise(r => setTimeout(r, 200));
+  }
+  // Limpar hist_local também
+  localStorage.removeItem('hist_local');
+  historicoLocal = [];
+  localStorage.setItem('produtos_sheets', JSON.stringify(produtosCache));
+  showToast('✅ ' + ok + ' produtos zerados!', 'success');
+  renderProdutos();
 }
 
 function exportCSV() {
