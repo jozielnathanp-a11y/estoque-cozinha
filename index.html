@@ -864,12 +864,13 @@ function fecharModal() {
 
 function excluirProduto(code) {
   const p = getProduto(code);
-  if (!confirm('Excluir "' + p.nome + '"?\nEssa ação não pode ser desfeita.')) return;
-  delete produtosCache[code];
+  if (!confirm('Zerar estoque de "' + p.nome + '"?')) return;
+  produtosCache[code].estoque = 0;
   localStorage.setItem('produtos_sheets', JSON.stringify(produtosCache));
-  sheetWrite({ acao: 'excluirProduto', codigo: code });
+  sheetWrite({ acao: 'movimentacao', dados: JSON.stringify({ codigo: code, nome: p.nome, tipo: 'contagem', qtd: 0, unidade: p.unidade, colaborador: 'Manual', obs: 'Zerar estoque', novoEstoque: 0 }) });
+  sincronizarGitHub();
   renderEstoque();
-  showToast('🗑️ Produto excluído', '');
+  showToast('✅ Estoque de ' + p.nome + ' zerado!', 'success');
 }
 
 function editarEstoque(code) {
