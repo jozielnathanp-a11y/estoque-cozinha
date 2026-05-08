@@ -1172,6 +1172,16 @@ function _getProdutosCozinhaData(data) {
 
 async function gerarRelatorioContagem() {
   historicoLocal = JSON.parse(localStorage.getItem('hist_local') || '[]');
+  const dataEl = document.getElementById('rel-data');
+  if (!dataEl.value) {
+    const agora = new Date();
+    dataEl.value = agora.getFullYear()+'-'+String(agora.getMonth()+1).padStart(2,'0')+'-'+String(agora.getDate()).padStart(2,'0');
+  }
+  const data = dataEl.value;
+  const agora2 = new Date();
+  const hoje = agora2.getFullYear()+'-'+String(agora2.getMonth()+1).padStart(2,'0')+'-'+String(agora2.getDate()).padStart(2,'0');
+  const eHoje = data === hoje;
+
   // Buscar sempre do Sheets para garantir dados atuais
   try {
     const resp = await fetch(API + '?acao=getProdutos&t=' + Date.now());
@@ -1182,14 +1192,24 @@ async function gerarRelatorioContagem() {
       localStorage.setItem('produtos_sheets_ts', String(Date.now()));
     }
   } catch(e) {}
-  const dataEl = document.getElementById('rel-data');
-  // Data local correta (sem problema de fuso)
-  if (!dataEl.value) {
-    const agora = new Date();
-    const local = agora.getFullYear()+'-'+String(agora.getMonth()+1).padStart(2,'0')+'-'+String(agora.getDate()).padStart(2,'0');
-    dataEl.value = local;
+
+  // Para dias anteriores, buscar movimentações do GitHub
+  if (!eHoje) {
+    try {
+      const url = `https://raw.githubusercontent.com/jozielnathanp-a11y/estoque-cozinha/main/movimentacoes/${data}.json?t=${Date.now()}`;
+      const resp2 = await fetch(url);
+      if (resp2.ok) {
+        const movs = await resp2.json();
+        if (Array.isArray(movs)) {
+          const existentes = new Set(historicoLocal.map(m => m.ts + m.codigo + m.qtd));
+          movs.forEach(m => {
+            const key = (m.ts||'') + (m.codigo||'') + (m.qtd||'');
+            if (!existentes.has(key)) historicoLocal.push(m);
+          });
+        }
+      }
+    } catch(e) {}
   }
-  const data = dataEl.value;
   const itens = _getProdutosCozinhaData(data);
   const cols  = _getColsSelecionadas();
   const el = document.getElementById('relatorio-contagem');
