@@ -1170,8 +1170,18 @@ function _getProdutosCozinhaData(data) {
   return Object.values(porProduto).sort((a,b) => a.nome.localeCompare(b.nome));
 }
 
-function gerarRelatorioContagem() {
+async function gerarRelatorioContagem() {
   historicoLocal = JSON.parse(localStorage.getItem('hist_local') || '[]');
+  // Buscar sempre do Sheets para garantir dados atuais
+  try {
+    const resp = await fetch(API + '?acao=getProdutos&t=' + Date.now());
+    const dados = await resp.json();
+    if (dados && typeof dados === 'object' && !dados.status) {
+      produtosCache = dados;
+      localStorage.setItem('produtos_sheets', JSON.stringify(produtosCache));
+      localStorage.setItem('produtos_sheets_ts', String(Date.now()));
+    }
+  } catch(e) {}
   const dataEl = document.getElementById('rel-data');
   // Data local correta (sem problema de fuso)
   if (!dataEl.value) {
