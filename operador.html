@@ -192,13 +192,21 @@ async function atualizarEstoque(codigo, novoEst, mov) {
   if (produtosCache[codigo]) produtosCache[codigo].estoque = novoEst;
   localStorage.setItem('produtos_sheets', JSON.stringify(produtosCache));
 
-  // Salvar no hist_local (compartilhado com o relatório do index.html)
   const movCompleto = { ...mov, ts: new Date().toISOString(), novoEstoque: novoEst, estoqueAnterior: mov.estoqueAnterior ?? 0 };
+
+  // Salvar no hist_local global
   const hist = JSON.parse(localStorage.getItem('hist_local') || '[]');
   hist.unshift(movCompleto);
-  // Manter apenas últimos 500 registros para não sobrecarregar
   if (hist.length > 500) hist.splice(500);
   localStorage.setItem('hist_local', JSON.stringify(hist));
+
+  // Salvar também em chave por dia (para consulta de dias anteriores)
+  const d = new Date(movCompleto.ts);
+  const dia = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const histDia = JSON.parse(localStorage.getItem('hist_'+dia) || '[]');
+  histDia.unshift(movCompleto);
+  if (histDia.length > 500) histDia.splice(500);
+  localStorage.setItem('hist_'+dia, JSON.stringify(histDia));
 
   await sheetWrite({ acao: 'movimentacao', dados: JSON.stringify({ ...mov, novoEstoque: novoEst }) });
   sincronizarGitHub();
