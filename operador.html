@@ -123,8 +123,11 @@
   <div style="background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;">
     <h2 id="modal-nome" style="font-size:1.1rem;color:#b71c1c;margin-bottom:4px;"></h2>
     <p id="modal-estoque" style="font-size:0.8rem;color:#888;margin-bottom:12px;"></p>
-    <label>Quantidade *</label>
-    <input type="number" id="modal-qtd" placeholder="Ex: 5" step="0.01" min="0.01" style="font-size:1.4rem;text-align:center;padding:10px;" />
+    <label id="modal-label" style="font-size:0.9rem;font-weight:600;">Quantidade</label>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+      <input type="number" id="modal-qtd" placeholder="0.000" step="0.001" min="0.001" style="font-size:1.6rem;text-align:center;padding:10px;flex:1;border:2px solid #ddd;border-radius:10px;" />
+      <span id="modal-unidade-badge" style="font-size:1.3rem;font-weight:700;color:#b71c1c;min-width:40px;text-align:center;"></span>
+    </div>
     <div id="modal-unidade" style="font-size:0.76rem;color:#888;margin-top:3px;"></div>
     <button class="btn btn-green" onclick="confirmarModal()" style="margin-top:14px;">✅ Confirmar</button>
     <button class="btn btn-gray" onclick="fecharModal()">Cancelar</button>
@@ -385,7 +388,11 @@ function abrirMovimentacao(code) {
   // Modal para kg e pão
   document.getElementById('modal-nome').textContent = p.nome;
   document.getElementById('modal-estoque').textContent = 'Estoque atual: ' + fmtQ(p.estoque, p.unidade);
-  document.getElementById('modal-unidade').textContent = 'Unidade: ' + p.unidade;
+  document.getElementById('modal-unidade').textContent = '';
+  document.getElementById('modal-unidade-badge').textContent = p.unidade;
+  document.getElementById('modal-label').textContent = p.unidade === 'kg' ? '⚖️ Peso em kg' : p.unidade === 'g' ? '⚖️ Peso em g' : 'Quantidade';
+  document.getElementById('modal-qtd').placeholder = p.unidade === 'kg' ? '0.000' : p.unidade === 'g' ? '0' : 'Ex: 5';
+  document.getElementById('modal-qtd').step = p.unidade === 'kg' ? '0.001' : '0.01';
   document.getElementById('modal-qtd').value = preTotal || '';
   const mo = document.getElementById('modal-overlay');
   mo.style.display = 'flex';
