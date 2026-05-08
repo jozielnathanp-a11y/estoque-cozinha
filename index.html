@@ -1193,22 +1193,16 @@ async function gerarRelatorioContagem() {
     }
   } catch(e) {}
 
-  // Para dias anteriores, buscar movimentações do GitHub
+  // Para dias anteriores, buscar movimentações salvas por dia no localStorage
   if (!eHoje) {
-    try {
-      const url = `https://raw.githubusercontent.com/jozielnathanp-a11y/estoque-cozinha/main/movimentacoes/${data}.json?t=${Date.now()}`;
-      const resp2 = await fetch(url);
-      if (resp2.ok) {
-        const movs = await resp2.json();
-        if (Array.isArray(movs)) {
-          const existentes = new Set(historicoLocal.map(m => m.ts + m.codigo + m.qtd));
-          movs.forEach(m => {
-            const key = (m.ts||'') + (m.codigo||'') + (m.qtd||'');
-            if (!existentes.has(key)) historicoLocal.push(m);
-          });
-        }
-      }
-    } catch(e) {}
+    const histDia = JSON.parse(localStorage.getItem('hist_' + data) || '[]');
+    if (histDia.length > 0) {
+      const existentes = new Set(historicoLocal.map(m => (m.ts||'') + (m.codigo||'') + (m.qtd||'')));
+      histDia.forEach(m => {
+        const key = (m.ts||'') + (m.codigo||'') + (m.qtd||'');
+        if (!existentes.has(key)) historicoLocal.push(m);
+      });
+    }
   }
   const itens = _getProdutosCozinhaData(data);
   const cols  = _getColsSelecionadas();
