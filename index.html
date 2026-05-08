@@ -344,6 +344,7 @@
     <h3>☁️ Sincronização</h3>
     <p style="font-size:0.83rem;color:#555;margin-bottom:10px;">Dados salvos no Google Sheets em tempo real.</p>
     <button class="btn btn-red" onclick="carregarProdutos(true)">🔄 Recarregar Produtos do Sheets</button>
+    <button class="btn btn-red" onclick="zerarHistLocal()" style="margin-top:8px;background:#b71c1c;">🗑️ Limpar Histórico Local</button>
     <button class="btn btn-green" onclick="exportCSV()" style="margin-top:8px;">📊 Exportar CSV Histórico</button>
   </div>
   <div class="card">
@@ -1660,6 +1661,14 @@ function exportarContagemWhats(grupo) {
     txt += `• *${h.nome}*\n  📦 ${anterior} | 📥 ${entrada} | 🧮 *${h.contagem} ${uni}*\n`;
   });
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+}
+
+function zerarHistLocal() {
+  if (!confirm('Limpar todo o histórico local? Isso não afeta o estoque do sistema.')) return;
+  localStorage.removeItem('hist_local');
+  historicoLocal = [];
+  showToast('✅ Histórico local zerado!', 'success');
+  renderHistorico();
 }
 
 function exportCSV() {
