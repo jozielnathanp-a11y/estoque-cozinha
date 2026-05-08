@@ -346,6 +346,7 @@
     <button class="btn btn-red" onclick="carregarProdutos(true)">🔄 Recarregar Produtos do Sheets</button>
     <button class="btn btn-red" onclick="zerarHistLocal()" style="margin-top:8px;background:#b71c1c;">🗑️ Limpar Histórico Local</button>
     <button class="btn btn-red" onclick="zerarTodoEstoque()" style="margin-top:8px;background:#4a0000;">⚠️ Zerar Todo Estoque</button>
+    <button class="btn btn-red" onclick="limparCacheTotal()" style="margin-top:8px;background:#000;">🔴 Limpar Cache Total</button>
     <button class="btn btn-green" onclick="exportCSV()" style="margin-top:8px;">📊 Exportar CSV Histórico</button>
   </div>
   <div class="card">
@@ -1662,6 +1663,13 @@ function exportarContagemWhats(grupo) {
     txt += `• *${h.nome}*\n  📦 ${anterior} | 📥 ${entrada} | 🧮 *${h.contagem} ${uni}*\n`;
   });
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+}
+
+function limparCacheTotal() {
+  if (!confirm('Limpar TODO o cache local? O app vai recarregar do servidor.')) return;
+  localStorage.clear();
+  showToast('Cache limpo! Recarregando...', 'success');
+  setTimeout(() => location.reload(true), 1000);
 }
 
 function zerarHistLocal() {
