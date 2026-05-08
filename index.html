@@ -1099,7 +1099,7 @@ function _getColsSelecionadas() {
 
 function debugHist() {
   historicoLocal = JSON.parse(localStorage.getItem('hist_local') || '[]');
-  const data = document.getElementById('rel-data').value || new Date().toISOString().slice(0,10);
+  const n=new Date(); const dataFallback=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); const data = document.getElementById('rel-data').value || dataFallback;
   const hist = historicoLocal.filter(m => m.ts && m.ts.slice(0,10) === data);
   const el = document.getElementById('relatorio-contagem');
   if (!hist.length) { el.innerHTML = '<p style="color:red;">Nenhum registro em hist_local para ' + data + '</p>'; return; }
@@ -1126,7 +1126,8 @@ function _getCatsSelecionadas() {
 
 function _getProdutosCozinhaData(data) {
   const cats = _getCatsSelecionadas();
-  const hoje = new Date().toISOString().slice(0,10);
+  const agora = new Date();
+  const hoje = agora.getFullYear()+'-'+String(agora.getMonth()+1).padStart(2,'0')+'-'+String(agora.getDate()).padStart(2,'0');
   const eHoje = data === hoje;
 
   // Todos os produtos das categorias selecionadas
@@ -1166,11 +1167,15 @@ function _getProdutosCozinhaData(data) {
 }
 
 function gerarRelatorioContagem() {
-  // Reler hist_local sempre fresquinho (pode ter sido atualizado pelo operador)
   historicoLocal = JSON.parse(localStorage.getItem('hist_local') || '[]');
   const dataEl = document.getElementById('rel-data');
-  const data = dataEl.value || new Date().toISOString().slice(0,10);
-  dataEl.value = data;
+  // Data local correta (sem problema de fuso)
+  if (!dataEl.value) {
+    const agora = new Date();
+    const local = agora.getFullYear()+'-'+String(agora.getMonth()+1).padStart(2,'0')+'-'+String(agora.getDate()).padStart(2,'0');
+    dataEl.value = local;
+  }
+  const data = dataEl.value;
   const itens = _getProdutosCozinhaData(data);
   const cols  = _getColsSelecionadas();
   const el = document.getElementById('relatorio-contagem');
@@ -1240,9 +1245,9 @@ function exportarRelatorioCopiar() {
 
 document.addEventListener('DOMContentLoaded', () => {
   const d = document.getElementById('rel-data');
-  if (d) d.value = new Date().toISOString().slice(0,10);
+  if (d) { const n=new Date(); d.value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); }
   const md = document.getElementById('manual-data');
-  if (md) md.value = new Date().toISOString().slice(0,10);
+  if (md) { const n=new Date(); md.value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); }
   preencherSelectManual();
 });
 
