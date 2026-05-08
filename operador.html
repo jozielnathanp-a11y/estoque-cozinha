@@ -122,23 +122,10 @@
 <div id="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;align-items:flex-end;justify-content:center;">
   <div style="background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;">
     <h2 id="modal-nome" style="font-size:1.1rem;color:#b71c1c;margin-bottom:4px;"></h2>
-    <p id="modal-estoque" style="font-size:0.8rem;color:#888;margin-bottom:12px;"></p>
-
-    <!-- Modo PCT (só aparece para kg com qtdPorPct definido) -->
-    <div id="modal-pct-area" style="display:none;background:#f5f5f5;border-radius:10px;padding:10px;margin-bottom:12px;">
-      <div id="modal-pct-info" style="font-size:0.82rem;color:#555;margin-bottom:6px;"></div>
-      <label style="font-size:0.85rem;font-weight:600;">Quantidade de PCT</label>
-      <input type="number" id="modal-pct-qtd" placeholder="Ex: 3" step="1" min="1" oninput="calcKgFromPct()"
-        style="font-size:1.3rem;text-align:center;padding:8px;width:100%;border:2px solid #ddd;border-radius:8px;margin-top:4px;" />
-      <div id="modal-pct-resultado" style="font-size:0.9rem;color:#1a237e;font-weight:700;margin-top:6px;text-align:center;"></div>
-    </div>
-
-    <label id="modal-label" style="font-size:0.9rem;font-weight:600;">Quantidade</label>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
-      <input type="number" id="modal-qtd" placeholder="0.000" step="0.001" min="0.001"
-        style="font-size:1.6rem;text-align:center;padding:10px;flex:1;border:2px solid #ddd;border-radius:10px;" />
-      <span id="modal-unidade-badge" style="font-size:1.3rem;font-weight:700;color:#b71c1c;min-width:40px;text-align:center;"></span>
-    </div>
+    <p id="modal-estoque" style="font-size:0.8rem;color:#888;margin-bottom:2px;"></p>
+    <p id="modal-pct-info" style="font-size:0.82rem;color:#1a237e;font-weight:600;margin-bottom:12px;display:none;"></p>
+    <label>Quantidade *</label>
+    <input type="number" id="modal-qtd" placeholder="Ex: 5" step="0.01" min="0.01" style="font-size:1.4rem;text-align:center;padding:10px;" />
     <div id="modal-unidade" style="font-size:0.76rem;color:#888;margin-top:3px;"></div>
     <button class="btn btn-green" onclick="confirmarModal()" style="margin-top:14px;">✅ Confirmar</button>
     <button class="btn btn-gray" onclick="fecharModal()">Cancelar</button>
@@ -399,23 +386,19 @@ function abrirMovimentacao(code) {
   // Modal para kg e pão
   document.getElementById('modal-nome').textContent = p.nome;
   document.getElementById('modal-estoque').textContent = 'Estoque atual: ' + fmtQ(p.estoque, p.unidade);
-  document.getElementById('modal-unidade').textContent = '';
-  document.getElementById('modal-unidade-badge').textContent = p.unidade;
-  document.getElementById('modal-label').textContent = p.unidade === 'kg' ? '⚖️ Peso em kg' : p.unidade === 'g' ? '⚖️ Peso em g' : 'Quantidade';
-  document.getElementById('modal-qtd').placeholder = p.unidade === 'kg' ? '0.000' : p.unidade === 'g' ? '0' : 'Ex: 5';
-  document.getElementById('modal-qtd').step = p.unidade === 'kg' ? '0.001' : '0.01';
+  document.getElementById('modal-unidade').textContent = 'Unidade: ' + p.unidade;
   document.getElementById('modal-qtd').value = preTotal || '';
-
-  // Área de PCT (kg com qtdPorPct definido)
-  const pctArea = document.getElementById('modal-pct-area');
+  // Mostrar info de PCT se aplicável
+  const pctInfo = document.getElementById('modal-pct-info');
   if (p.unidade === 'kg' && p.qtdPorPct > 0) {
-    pctArea.style.display = 'block';
-    document.getElementById('modal-pct-info').textContent = '1 PCT = ' + p.qtdPorPct + ' kg';
-    document.getElementById('modal-pct-qtd').value = '';
-    document.getElementById('modal-pct-resultado').textContent = '';
+    pctInfo.textContent = '1 PCT = ' + p.qtdPorPct + ' kg';
+    pctInfo.style.display = 'block';
   } else {
-    pctArea.style.display = 'none';
+    pctInfo.style.display = 'none';
   }
+  // Área PCT extra (não existe mais)
+  const pctArea = document.getElementById('modal-pct-area');
+  if (pctArea) pctArea.style.display = 'none';
   const mo = document.getElementById('modal-overlay');
   mo.style.display = 'flex';
   setTimeout(() => document.getElementById('modal-qtd').focus(), 300);
