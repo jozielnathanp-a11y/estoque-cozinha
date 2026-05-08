@@ -554,8 +554,8 @@ async function carregarProdutos(forcar = false) {
   const ts     = parseInt(localStorage.getItem('produtos_sheets_ts') || '0');
   const agora  = Date.now();
 
-  // Usar cache por até 2 minutos (exceto se forcar)
-  if (!forcar && cached && (agora - ts) < 2 * 60 * 1000) {
+  // Usar cache por até 30 segundos apenas (antes era 2 minutos)
+  if (!forcar && cached && (agora - ts) < 30 * 1000) {
     produtosCache = JSON.parse(cached);
     await aplicarMinMax();
     setSyncStatus('✅ ' + Object.keys(produtosCache).length + ' produtos');
@@ -1687,12 +1687,15 @@ async function zerarTodoEstoque() {
     } catch(e) {}
     await new Promise(r => setTimeout(r, 200));
   }
-  // Limpar hist_local também
+  // Limpar hist_local e cache
   localStorage.removeItem('hist_local');
+  localStorage.removeItem('produtos_sheets');
+  localStorage.removeItem('produtos_sheets_ts');
   historicoLocal = [];
   localStorage.setItem('produtos_sheets', JSON.stringify(produtosCache));
+  localStorage.setItem('produtos_sheets_ts', String(Date.now()));
   showToast('✅ ' + ok + ' produtos zerados!', 'success');
-  renderProdutos();
+  renderEstoque();
 }
 
 function exportCSV() {
